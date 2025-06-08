@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   ShoppingCart,
   ListOrdered,
-  ShoppingBag,
   Users,
   FileText,
   LayoutPanelLeft,
@@ -20,7 +19,6 @@ import {
   Settings2,
   UserCog,
   UserCircle2,
-  ChevronDown,
   ChevronRight,
   Home,
   Info,
@@ -36,7 +34,6 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
 
 export interface NavItem {
   title: string;
@@ -53,7 +50,6 @@ const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { title: "Menu", href: "/dashboard/menu", icon: ListOrdered },
-  { title: "Merchandise", href: "/dashboard/merchandise", icon: ShoppingBag },
   { title: "Customers", href: "/dashboard/customers", icon: Users },
   {
     title: "CMS",
@@ -96,7 +92,6 @@ export function SidebarNav() {
       const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
       
       if (item.items && item.items.length > 0) {
-        // Check if any sub-item is active to keep the collapsible open
         const isParentActive = item.items.some(subItem => pathname.startsWith(subItem.href));
         return (
           <SidebarMenuItem key={item.href}>
@@ -104,7 +99,7 @@ export function SidebarNav() {
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
                   className="w-full justify-between"
-                  isActive={isActive && !item.items.some(subItem => pathname.startsWith(subItem.href))} // Active only if not a sub-item path
+                  isActive={isActive && !item.items.some(subItem => pathname.startsWith(subItem.href))}
                   aria-expanded={isParentActive}
                   asChild={!isSubmenu && !item.items}
                 >

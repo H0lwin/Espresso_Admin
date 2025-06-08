@@ -14,6 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -28,17 +36,26 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
-  SheetClose
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Search, PlusCircle, FileDown, Eye, Edit, Truck, CheckCircle, XCircle, RefreshCcw } from "lucide-react";
+import { MoreHorizontal, Search, PlusCircle, FileDown, Eye, Edit, Truck, CheckCircle, XCircle, RefreshCcw, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 type PaymentStatus = "Paid" | "Unpaid" | "Refunded";
 
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+}
 interface Order {
   id: string;
   customer: { name: string; email: string; avatar: string };
@@ -46,7 +63,7 @@ interface Order {
   status: OrderStatus;
   total: number;
   paymentStatus: PaymentStatus;
-  items: { id: string; name: string; quantity: number; price: number; image: string }[];
+  items: OrderItem[];
 }
 
 const mockOrders: Order[] = [
@@ -75,48 +92,15 @@ const mockOrders: Order[] = [
       { id: "item05", name: "Travel Tumbler", quantity: 1, price: 24.00, image: "https://placehold.co/100x100.png" },
     ],
   },
-  {
-    id: "ORD003",
-    customer: { name: "Charlie Brown", email: "charlie@example.com", avatar: "CB" },
-    date: "2023-10-24",
-    status: "Pending",
-    total: 18.99,
-    paymentStatus: "Unpaid",
-    items: [
-      { id: "item01", name: "Espresso Roast (1kg)", quantity: 1, price: 18.99, image: "https://placehold.co/100x100.png" },
-    ],
-  },
-  {
-    id: "ORD004",
-    customer: { name: "Diana Prince", email: "diana@example.com", avatar: "DP" },
-    date: "2023-10-23",
-    status: "Shipped",
-    total: 120.00,
-    paymentStatus: "Paid",
-    items: [
-      { id: "item06", name: "Barista Starter Kit", quantity: 1, price: 120.00, image: "https://placehold.co/100x100.png" },
-    ],
-  },
-  {
-    id: "ORD005",
-    customer: { name: "Edward Scissorhands", email: "edward@example.com", avatar: "ES" },
-    date: "2023-10-22",
-    status: "Cancelled",
-    total: 35.75,
-    paymentStatus: "Refunded",
-    items: [
-      { id: "item07", name: "French Press", quantity: 1, price: 35.75, image: "https://placehold.co/100x100.png" },
-    ],
-  },
 ];
 
 const getStatusBadgeVariant = (status: OrderStatus) => {
   switch (status) {
-    case "Delivered": return "default"; // Green in default theme, adjust if needed
-    case "Processing": return "secondary"; // Blueish
-    case "Shipped": return "outline"; // Yellowish/Orangeish
-    case "Pending": return "destructive"; // Reddish
-    case "Cancelled": return "outline"; // Greyish
+    case "Delivered": return "default"; 
+    case "Processing": return "secondary"; 
+    case "Shipped": return "outline"; 
+    case "Pending": return "destructive"; 
+    case "Cancelled": return "outline"; 
     default: return "outline";
   }
 };
@@ -132,11 +116,22 @@ const getPaymentBadgeVariant = (status: PaymentStatus) => {
 
 
 export default function OrdersPage() {
+  const { toast } = useToast();
+  const [orders, setOrders] = React.useState<Order[]>(mockOrders);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
+  const [isNewOrderFormOpen, setIsNewOrderFormOpen] = React.useState(false);
+  const [isSubmittingNewOrder, setIsSubmittingNewOrder] = React.useState(false);
 
-  const filteredOrders = mockOrders.filter(order => {
+  // New Order Form State
+  const [newOrderCustomerName, setNewOrderCustomerName] = React.useState("");
+  const [newOrderCustomerEmail, setNewOrderCustomerEmail] = React.useState("");
+  const [newOrderItems, setNewOrderItems] = React.useState(""); // Simple text for now
+  const [newOrderTotal, setNewOrderTotal] = React.useState("");
+
+
+  const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -148,6 +143,44 @@ export default function OrdersPage() {
     setSelectedOrder(order);
   };
 
+  const handleOpenNewOrderForm = () => {
+    setNewOrderCustomerName("");
+    setNewOrderCustomerEmail("");
+    setNewOrderItems("");
+    setNewOrderTotal("");
+    setIsNewOrderFormOpen(true);
+  };
+
+  const handleAddNewOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingNewOrder(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const newOrder: Order = {
+      id: `ORD${Date.now().toString().slice(-4)}`,
+      customer: { 
+        name: newOrderCustomerName, 
+        email: newOrderCustomerEmail, 
+        avatar: newOrderCustomerName.split(" ").map(n => n[0]).join("").toUpperCase() || "XX" 
+      },
+      date: new Date().toISOString().split("T")[0],
+      status: "Pending",
+      total: parseFloat(newOrderTotal) || 0,
+      paymentStatus: "Unpaid",
+      items: [{ id: "item-custom", name: newOrderItems.split('\n')[0] || "Custom Item", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }], // Simplified
+    };
+    setOrders(prevOrders => [newOrder, ...prevOrders]);
+    
+    toast({
+      title: "Order Created",
+      description: `New order ${newOrder.id} has been successfully created.`,
+    });
+    setIsSubmittingNewOrder(false);
+    setIsNewOrderFormOpen(false);
+  };
+
+
   return (
     <>
       <PageHeader
@@ -158,7 +191,7 @@ export default function OrdersPage() {
             <Button variant="outline">
               <FileDown className="mr-2 h-4 w-4" /> Export CSV
             </Button>
-            <Button>
+            <Button onClick={handleOpenNewOrderForm}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Order
             </Button>
           </div>
@@ -276,6 +309,7 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* View Order Details Sheet */}
       <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
         <SheetContent className="sm:max-w-lg w-[90vw] p-0">
           {selectedOrder && (
@@ -292,7 +326,6 @@ export default function OrdersPage() {
                   <div className="space-y-1 text-sm">
                     <p><strong>Name:</strong> {selectedOrder.customer.name}</p>
                     <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
-                    {/* Add more customer details like shipping/billing address here */}
                   </div>
                 </div>
                 <Separator />
@@ -321,8 +354,8 @@ export default function OrdersPage() {
                   <h3 className="text-lg font-semibold mb-2">Price Breakdown</h3>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between"><span>Subtotal:</span> <span>${selectedOrder.total.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Shipping:</span> <span>$0.00</span></div> {/* Placeholder */}
-                    <div className="flex justify-between"><span>Tax:</span> <span>$0.00</span></div> {/* Placeholder */}
+                    <div className="flex justify-between"><span>Shipping:</span> <span>$0.00</span></div>
+                    <div className="flex justify-between"><span>Tax:</span> <span>$0.00</span></div>
                     <Separator className="my-2"/>
                     <div className="flex justify-between font-semibold text-base"><span>Total:</span> <span>${selectedOrder.total.toFixed(2)}</span></div>
                   </div>
@@ -344,9 +377,75 @@ export default function OrdersPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Add New Order Dialog */}
+      <Dialog open={isNewOrderFormOpen} onOpenChange={setIsNewOrderFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Order</DialogTitle>
+            <DialogDescription>Manually create a new order. Specify customer details and items.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddNewOrderSubmit} className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="newOrderCustomerName">Customer Name</Label>
+              <Input 
+                id="newOrderCustomerName" 
+                value={newOrderCustomerName} 
+                onChange={(e) => setNewOrderCustomerName(e.target.value)} 
+                placeholder="John Doe" 
+                required 
+                disabled={isSubmittingNewOrder}
+              />
+            </div>
+            <div>
+              <Label htmlFor="newOrderCustomerEmail">Customer Email</Label>
+              <Input 
+                id="newOrderCustomerEmail" 
+                type="email" 
+                value={newOrderCustomerEmail} 
+                onChange={(e) => setNewOrderCustomerEmail(e.target.value)} 
+                placeholder="john.doe@example.com" 
+                required 
+                disabled={isSubmittingNewOrder}
+              />
+            </div>
+            <div>
+              <Label htmlFor="newOrderItems">Items (Name, Qty, Price per line - simplified)</Label>
+              <Textarea 
+                id="newOrderItems" 
+                value={newOrderItems} 
+                onChange={(e) => setNewOrderItems(e.target.value)} 
+                placeholder="Example: Espresso, 2, 3.50\nLatte, 1, 4.00" 
+                rows={4}
+                disabled={isSubmittingNewOrder}
+              />
+              <p className="text-xs text-muted-foreground mt-1">For now, please calculate total manually.</p>
+            </div>
+            <div>
+              <Label htmlFor="newOrderTotal">Order Total ($)</Label>
+              <Input 
+                id="newOrderTotal" 
+                type="number" 
+                value={newOrderTotal} 
+                onChange={(e) => setNewOrderTotal(e.target.value)} 
+                placeholder="7.50" 
+                step="0.01" 
+                required 
+                disabled={isSubmittingNewOrder}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsNewOrderFormOpen(false)} disabled={isSubmittingNewOrder}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmittingNewOrder}>
+                {isSubmittingNewOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmittingNewOrder ? "Creating..." : "Create Order"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
-
-
-    
