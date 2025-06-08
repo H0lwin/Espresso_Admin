@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -20,15 +21,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud } from "lucide-react";
+import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 type ItemStatus = "Available" | "Unavailable" | "Draft";
 interface MenuItem {
@@ -39,6 +40,7 @@ interface MenuItem {
   imageUrl: string;
   status: ItemStatus;
   description?: string;
+  imageFile?: File | null;
 }
 
 const mockMenuItems: MenuItem[] = [
@@ -52,19 +54,22 @@ const mockMenuItems: MenuItem[] = [
 const categories = ["All", "Coffee", "Tea", "Pastries", "Food", "Desserts", "Drinks"];
 
 export default function MenuPage() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("All");
   const [menuItems, setMenuItems] = React.useState<MenuItem[]>(mockMenuItems);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<MenuItem | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  // Form state (could use react-hook-form for more complex forms)
+  // Form state
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemPrice, setItemPrice] = React.useState("");
   const [itemStatus, setItemStatus] = React.useState<ItemStatus>("Available");
   const [itemDescription, setItemDescription] = React.useState("");
   const [itemImagePreview, setItemImagePreview] = React.useState<string | null>(null);
+  const [itemImageFile, setItemImageFile] = React.useState<File | null>(null);
 
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -76,11 +81,12 @@ export default function MenuPage() {
   const handleAddNewItem = () => {
     setEditingItem(null);
     setItemName("");
-    setItemCategory(categories[1]); // Default to first actual category
+    setItemCategory(categories[1]); 
     setItemPrice("");
     setItemStatus("Available");
     setItemDescription("");
-    setItemImagePreview(null);
+    setItemImagePreview("https://placehold.co/80x80.png");
+    setItemImageFile(null);
     setIsFormOpen(true);
   };
 
@@ -92,43 +98,63 @@ export default function MenuPage() {
     setItemStatus(item.status);
     setItemDescription(item.description || "");
     setItemImagePreview(item.imageUrl);
+    setItemImageFile(null);
     setIsFormOpen(true);
   };
 
   const handleDeleteItem = (itemId: string) => {
-    // Confirm deletion
     if (window.confirm("Are you sure you want to delete this item?")) {
       setMenuItems(prevItems => prevItems.filter(item => item.id !== itemId));
+      toast({
+        title: "Item Deleted",
+        description: "The menu item has been removed.",
+      });
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newItemData: Omit<MenuItem, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string } = {
+    setIsLoading(true);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newItemData: Omit<MenuItem, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string, imageFile?: File | null } = {
       name: itemName,
       category: itemCategory,
       price: parseFloat(itemPrice) || 0,
       status: itemStatus,
       description: itemDescription,
-      imageUrl: itemImagePreview || "https://placehold.co/80x80.png", // Use placeholder if no image
+      imageUrl: itemImagePreview || "https://placehold.co/80x80.png",
+      imageFile: itemImageFile,
     };
 
     if (editingItem) {
       setMenuItems(prevItems => 
         prevItems.map(item => item.id === editingItem.id ? { ...editingItem, ...newItemData, id: editingItem.id, imageUrl: itemImagePreview || editingItem.imageUrl } : item)
       );
+      toast({
+        title: "Item Updated",
+        description: `${itemName} has been successfully updated.`,
+      });
     } else {
       setMenuItems(prevItems => [
         ...prevItems,
         { ...newItemData, id: `menu${Date.now()}`, imageUrl: itemImagePreview || "https://placehold.co/80x80.png" } as MenuItem,
       ]);
+      toast({
+        title: "Item Added",
+        description: `${itemName} has been successfully added to the menu.`,
+      });
     }
+    setIsLoading(false);
     setIsFormOpen(false);
   };
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setItemImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setItemImagePreview(reader.result as string);
@@ -138,7 +164,6 @@ export default function MenuPage() {
   };
 
   const getRowActions = (item: MenuItem): ActionItem[] => [
-    { label: "View Details", icon: Eye, onClick: () => handleEditItem(item) /* For now, edit acts as view */ },
     { label: "Edit Item", icon: Edit, onClick: () => handleEditItem(item) },
     { label: "---" },
     { label: "Delete Item", icon: Trash2, onClick: () => handleDeleteItem(item.id), isDestructive: true },
@@ -159,7 +184,7 @@ export default function MenuPage() {
         title="Menu Management"
         description="Manage your food and drink offerings."
         actions={
-          <Button onClick={handleAddNewItem}>
+          <Button onClick={handleAddNewItem} disabled={isLoading}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
           </Button>
         }
@@ -174,9 +199,10 @@ export default function MenuPage() {
             className="pl-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoading}
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoading}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
@@ -186,8 +212,6 @@ export default function MenuPage() {
             ))}
           </SelectContent>
         </Select>
-        {/* Optional: Category CRUD button */}
-        {/* <Button variant="outline">Manage Categories</Button> */}
       </div>
 
       <div className="rounded-lg border shadow-sm">
@@ -235,7 +259,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingItem ? "Edit Menu Item" : "Add New Menu Item"}</DialogTitle>
@@ -247,11 +271,11 @@ export default function MenuPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="itemName">Name</Label>
-                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="e.g., Classic Latte" required />
+                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="e.g., Classic Latte" required disabled={isLoading} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="itemCategory">Category</Label>
-                <Select value={itemCategory} onValueChange={setItemCategory} required>
+                <Select value={itemCategory} onValueChange={setItemCategory} required disabled={isLoading}>
                   <SelectTrigger id="itemCategory">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -267,11 +291,11 @@ export default function MenuPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="itemPrice">Price</Label>
-                <Input id="itemPrice" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} placeholder="e.g., 4.50" step="0.01" required />
+                <Input id="itemPrice" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} placeholder="e.g., 4.50" step="0.01" required disabled={isLoading} />
               </div>
                <div className="space-y-2">
                 <Label htmlFor="itemStatus">Status</Label>
-                <Select value={itemStatus} onValueChange={(val) => setItemStatus(val as ItemStatus)} required>
+                <Select value={itemStatus} onValueChange={(val) => setItemStatus(val as ItemStatus)} required disabled={isLoading}>
                   <SelectTrigger id="itemStatus">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -286,7 +310,7 @@ export default function MenuPage() {
 
             <div className="space-y-2">
               <Label htmlFor="itemDescription">Description (Optional)</Label>
-              <Textarea id="itemDescription" value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="Short description of the item..." />
+              <Textarea id="itemDescription" value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="Short description of the item..." disabled={isLoading} />
             </div>
             
             <div className="space-y-2">
@@ -295,17 +319,20 @@ export default function MenuPage() {
                 {itemImagePreview && (
                   <Image src={itemImagePreview} alt="Preview" width={80} height={80} className="rounded-md object-cover" data-ai-hint="item preview" />
                 )}
-                <Input id="itemImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" />
-                <Button type="button" variant="outline" onClick={() => document.getElementById('itemImage')?.click()}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> {itemImagePreview ? "Change Image" : "Upload Image"}
+                <Input id="itemImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
+                <Button type="button" variant="outline" onClick={() => document.getElementById('itemImage')?.click()} disabled={isLoading}>
+                  <UploadCloud className="mr-2 h-4 w-4" /> {itemImagePreview && !itemImageFile ? "Change Image" : "Upload Image"}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Recommended size: 200x200px. Max 1MB.</p>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingItem ? "Save Changes" : "Add Item"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingItem ? "Save Changes" : "Add Item"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -313,3 +340,5 @@ export default function MenuPage() {
     </>
   );
 }
+
+    

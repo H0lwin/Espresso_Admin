@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -23,9 +24,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud } from "lucide-react";
+import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   id: string;
@@ -35,6 +37,7 @@ interface Product {
   imageUrl: string;
   category: string;
   description?: string;
+  imageFile?: File | null;
 }
 
 const mockProducts: Product[] = [
@@ -48,11 +51,13 @@ const mockProducts: Product[] = [
 const productCategories = ["All", "Drinkware", "Coffee Beans", "Apparel", "Accessories", "Gift Cards"];
 
 export default function MerchandisePage() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("All");
   const [products, setProducts] = React.useState<Product[]>(mockProducts);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Form state
   const [productName, setProductName] = React.useState("");
@@ -61,6 +66,7 @@ export default function MerchandisePage() {
   const [productStock, setProductStock] = React.useState("");
   const [productDescription, setProductDescription] = React.useState("");
   const [productImagePreview, setProductImagePreview] = React.useState<string | null>(null);
+  const [productImageFile, setProductImageFile] = React.useState<File | null>(null);
 
 
   const filteredProducts = products.filter(product => {
@@ -76,7 +82,8 @@ export default function MerchandisePage() {
     setProductPrice("");
     setProductStock("");
     setProductDescription("");
-    setProductImagePreview(null);
+    setProductImagePreview("https://placehold.co/80x80.png");
+    setProductImageFile(null);
     setIsFormOpen(true);
   };
 
@@ -88,42 +95,63 @@ export default function MerchandisePage() {
     setProductStock(product.stock.toString());
     setProductDescription(product.description || "");
     setProductImagePreview(product.imageUrl);
+    setProductImageFile(null);
     setIsFormOpen(true);
   };
 
   const handleDeleteProduct = (productId: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
+      toast({
+        title: "Product Deleted",
+        description: "The product has been removed from merchandise.",
+      });
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newProductData: Omit<Product, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string } = {
+    setIsLoading(true);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newProductData: Omit<Product, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string, imageFile?: File | null } = {
       name: productName,
       category: productCategory,
       price: parseFloat(productPrice) || 0,
       stock: parseInt(productStock) || 0,
       description: productDescription,
       imageUrl: productImagePreview || "https://placehold.co/80x80.png",
+      imageFile: productImageFile,
     };
 
     if (editingProduct) {
       setProducts(prevProducts =>
         prevProducts.map(prod => prod.id === editingProduct.id ? { ...editingProduct, ...newProductData, id: editingProduct.id, imageUrl: productImagePreview || editingProduct.imageUrl } : prod)
       );
+      toast({
+        title: "Product Updated",
+        description: `${productName} has been successfully updated.`,
+      });
     } else {
       setProducts(prevProducts => [
         ...prevProducts,
         { ...newProductData, id: `prod${Date.now()}`, imageUrl: productImagePreview || "https://placehold.co/80x80.png" } as Product,
       ]);
+      toast({
+        title: "Product Added",
+        description: `${productName} has been successfully added to merchandise.`,
+      });
     }
+    setIsLoading(false);
     setIsFormOpen(false);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setProductImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setProductImagePreview(reader.result as string);
@@ -133,7 +161,6 @@ export default function MerchandisePage() {
   };
   
   const getRowActions = (product: Product): ActionItem[] => [
-    { label: "View Details", icon: Eye, onClick: () => handleEditProduct(product) },
     { label: "Edit Product", icon: Edit, onClick: () => handleEditProduct(product) },
     { label: "---" },
     { label: "Delete Product", icon: Trash2, onClick: () => handleDeleteProduct(product.id), isDestructive: true },
@@ -145,7 +172,7 @@ export default function MerchandisePage() {
         title="Merchandise Products"
         description="Manage your store's merchandise items."
         actions={
-          <Button onClick={handleAddNewProduct}>
+          <Button onClick={handleAddNewProduct} disabled={isLoading}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
           </Button>
         }
@@ -160,9 +187,10 @@ export default function MerchandisePage() {
             className="pl-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoading}
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoading}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Filter by category" />
           </SelectTrigger>
@@ -217,7 +245,7 @@ export default function MerchandisePage() {
         </div>
       )}
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
@@ -229,11 +257,11 @@ export default function MerchandisePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="productName">Product Name</Label>
-                    <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g., Signature Mug" required />
+                    <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g., Signature Mug" required disabled={isLoading} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="productCategory">Category</Label>
-                    <Select value={productCategory} onValueChange={setProductCategory} required>
+                    <Select value={productCategory} onValueChange={setProductCategory} required disabled={isLoading}>
                     <SelectTrigger id="productCategory">
                         <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -248,16 +276,16 @@ export default function MerchandisePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="productPrice">Price</Label>
-                    <Input id="productPrice" type="number" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="e.g., 15.00" step="0.01" required />
+                    <Input id="productPrice" type="number" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="e.g., 15.00" step="0.01" required disabled={isLoading} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="productStock">Stock Quantity</Label>
-                    <Input id="productStock" type="number" value={productStock} onChange={(e) => setProductStock(e.target.value)} placeholder="e.g., 100" step="1" required />
+                    <Input id="productStock" type="number" value={productStock} onChange={(e) => setProductStock(e.target.value)} placeholder="e.g., 100" step="1" required disabled={isLoading} />
                 </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="productDescription">Description (Optional)</Label>
-                <Textarea id="productDescription" value={productDescription} onChange={(e) => setProductDescription(e.target.value)} placeholder="Short description of the product..." />
+                <Textarea id="productDescription" value={productDescription} onChange={(e) => setProductDescription(e.target.value)} placeholder="Short description of the product..." disabled={isLoading} />
             </div>
              <div className="space-y-2">
               <Label htmlFor="productImage">Image</Label>
@@ -265,16 +293,19 @@ export default function MerchandisePage() {
                 {productImagePreview && (
                   <Image src={productImagePreview} alt="Preview" width={80} height={80} className="rounded-md object-cover" data-ai-hint="product preview" />
                 )}
-                <Input id="productImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" />
-                <Button type="button" variant="outline" onClick={() => document.getElementById('productImage')?.click()}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> {productImagePreview ? "Change Image" : "Upload Image"}
+                <Input id="productImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
+                <Button type="button" variant="outline" onClick={() => document.getElementById('productImage')?.click()} disabled={isLoading}>
+                  <UploadCloud className="mr-2 h-4 w-4" /> {productImagePreview && !productImageFile ? "Change Image" : "Upload Image"}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Recommended size: 400x400px. Max 2MB.</p>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingProduct ? "Save Changes" : "Add Product"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingProduct ? "Save Changes" : "Add Product"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -282,3 +313,5 @@ export default function MerchandisePage() {
     </>
   );
 }
+
+    

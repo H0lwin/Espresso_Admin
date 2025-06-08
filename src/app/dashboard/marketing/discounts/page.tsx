@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -24,13 +25,14 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Edit, Trash2, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react"
 import { format, addDays } from "date-fns";
 import { DateRange } from "react-day-picker";
+import { useToast } from "@/hooks/use-toast";
 
 type DiscountType = "Percentage" | "Fixed Amount";
 type DiscountStatus = "Active" | "Inactive" | "Expired";
@@ -54,10 +56,12 @@ const mockDiscounts: DiscountCode[] = [
 ];
 
 export default function DiscountCodesPage() {
+  const { toast } = useToast();
   const [discounts, setDiscounts] = React.useState<DiscountCode[]>(mockDiscounts);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingDiscount, setEditingDiscount] = React.useState<DiscountCode | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Form state
   const [code, setCode] = React.useState("");
@@ -96,11 +100,20 @@ export default function DiscountCodesPage() {
   const handleDeleteDiscount = (discountId: string) => {
     if (window.confirm("Are you sure you want to delete this discount code?")) {
       setDiscounts(prev => prev.filter(d => d.id !== discountId));
+      toast({
+        title: "Discount Deleted",
+        description: "The discount code has been removed.",
+      });
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const newDiscountData: Omit<DiscountCode, 'id' | 'status' | 'timesUsed'> & { id?: string, status?: DiscountStatus, timesUsed?: number } = {
       code,
       type,
@@ -117,9 +130,18 @@ export default function DiscountCodesPage() {
     
     if (editingDiscount) {
       setDiscounts(prev => prev.map(d => d.id === editingDiscount.id ? { ...editingDiscount, ...newDiscountData, status } : d));
+      toast({
+        title: "Discount Updated",
+        description: `Discount code ${code} has been successfully updated.`,
+      });
     } else {
       setDiscounts(prev => [...prev, { ...newDiscountData, id: `disc${Date.now()}`, status, timesUsed: 0 } as DiscountCode]);
+      toast({
+        title: "Discount Created",
+        description: `Discount code ${code} has been successfully created.`,
+      });
     }
+    setIsLoading(false);
     setIsFormOpen(false);
   };
   
@@ -142,7 +164,7 @@ export default function DiscountCodesPage() {
         title="Discount Codes"
         description="Create and manage discount codes for your customers."
         actions={
-          <Button onClick={handleAddNewDiscount}>
+          <Button onClick={handleAddNewDiscount} disabled={isLoading}>
             <PlusCircle className="mr-2 h-4 w-4" /> Create Discount Code
           </Button>
         }
@@ -156,6 +178,7 @@ export default function DiscountCodesPage() {
             className="pl-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoading}
           />
         </div>
       </div>
@@ -198,7 +221,7 @@ export default function DiscountCodesPage() {
         </div>
       )}
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingDiscount ? "Edit Discount Code" : "Create New Discount Code"}</DialogTitle>
@@ -206,12 +229,12 @@ export default function DiscountCodesPage() {
           <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
             <div>
               <Label htmlFor="code">Discount Code</Label>
-              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="E.g., SAVE10" required />
+              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="E.g., SAVE10" required disabled={isLoading} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="type">Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v as DiscountType)}>
+                <Select value={type} onValueChange={(v) => setType(v as DiscountType)} disabled={isLoading}>
                   <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Percentage">Percentage</SelectItem>
@@ -221,14 +244,14 @@ export default function DiscountCodesPage() {
               </div>
               <div>
                 <Label htmlFor="value">Value</Label>
-                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "Percentage" ? "10" : "5.00"} step={type === "Percentage" ? "1" : "0.01"} required />
+                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "Percentage" ? "10" : "5.00"} step={type === "Percentage" ? "1" : "0.01"} required disabled={isLoading} />
               </div>
             </div>
             <div>
               <Label htmlFor="dateRange">Date Range</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button id="dateRange" variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button id="dateRange" variant="outline" className="w-full justify-start text-left font-normal" disabled={isLoading}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
@@ -244,21 +267,24 @@ export default function DiscountCodesPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
+                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} disabled={isLoading} />
                 </PopoverContent>
               </Popover>
             </div>
              <div>
               <Label htmlFor="usageLimit">Usage Limit (Optional)</Label>
-              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="E.g., 100 (leave blank for unlimited)" />
+              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="E.g., 100 (leave blank for unlimited)" disabled={isLoading} />
             </div>
             <div className="flex items-center space-x-2">
-              <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} />
+              <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={isLoading} />
               <Label htmlFor="isActive">Active</Label>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingDiscount ? "Save Changes" : "Create Code"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingDiscount ? "Save Changes" : "Create Code"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -266,3 +292,5 @@ export default function DiscountCodesPage() {
     </>
   );
 }
+
+    
