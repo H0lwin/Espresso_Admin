@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -38,61 +38,89 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
 import { PlusCircle, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
-// Removed metadata export:
-// export const metadata: Metadata = {
-//   title: 'مدیریت کاربران ادمین - پنل مدیریت اسپرسو اِج',
-// };
+// Assuming API might send role keys like 'admin', 'editor', 'support'
+type ApiAdminRoleKey = "administrator" | "editor" | "support"; 
+type FormAdminRole = "Administrator" | "Editor" | "Support"; // For form display
 
-type AdminRole = "Administrator" | "Editor" | "Support";
-const adminRoleTranslations: Record<AdminRole, string> = {
+const apiRoleToFormRole: Record<ApiAdminRoleKey, FormAdminRole> = {
+  administrator: "Administrator",
+  editor: "Editor",
+  support: "Support",
+};
+const formRoleToApiRole: Record<FormAdminRole, ApiAdminRoleKey> = {
+  Administrator: "administrator",
+  Editor: "editor",
+  Support: "support",
+};
+
+const adminRoleTranslations: Record<FormAdminRole, string> = {
   Administrator: "مدیر کل",
   Editor: "ویرایشگر",
   Support: "پشتیبان",
 };
 
 interface AdminUser {
-  id: string;
+  id: string | number;
   name: string;
   email: string;
-  role: AdminRole;
-  lastLogin: string; 
-  avatarFallback: string;
-  avatarUrl?: string;
+  role: ApiAdminRoleKey; // Role from API
+  last_login?: string | null; // snake_case, optional from API
+  avatar_url?: string;
+  avatar_initials?: string;
 }
 
-const mockAdminUsers: AdminUser[] = [
-  { id: "admin001", name: "مدیر ارشد", email: "super.admin@espressoedge.com", role: "Administrator", lastLogin: "2023-10-26T10:00:00Z", avatarFallback: "ما" },
-  { id: "admin002", name: "ویرایشگر محتوا", email: "editor@espressoedge.com", role: "Editor", lastLogin: "2023-10-25T14:30:00Z", avatarFallback: "وم", avatarUrl: "https://placehold.co/40x40.png" },
-  { id: "admin003", name: "کارمند پشتیبانی", email: "support@espressoedge.com", role: "Support", lastLogin: "2023-10-26T09:15:00Z", avatarFallback: "ک‌پ" },
-];
-
-const adminRoles: AdminRole[] = ["Administrator", "Editor", "Support"];
+const formAdminRoles: FormAdminRole[] = ["Administrator", "Editor", "Support"];
 
 export default function AdminUsersPage() {
   const { toast } = useToast();
-  const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>(mockAdminUsers);
+  const [adminUsers, setAdminUsers] = React.useState<AdminUser[]>([]);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<AdminUser | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<AdminUser | null>(null);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [role, setRole] = React.useState<AdminRole>("Support");
+  const [formRole, setFormRole] = React.useState<FormAdminRole>("Support"); // For form
   const [password, setPassword] = React.useState("");
 
-  const filteredAdminUsers = adminUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchAdminUsers = async () => {
+      setIsLoadingData(true);
+      let url = "/api/v1/admin/users/"; // Replace with your actual endpoint
+      if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+      }
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("خطا در دریافت لیست کاربران ادمین");
+        }
+        const data = await response.json();
+        setAdminUsers(data.results || []); // Assuming DRF pagination
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری لیست کاربران ادمین وجود ندارد.",
+          variant: "destructive",
+        });
+        setAdminUsers([]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchAdminUsers();
+  }, [searchTerm, toast]);
 
   const handleAddNewUser = () => {
     setEditingUser(null);
     setName("");
     setEmail("");
-    setRole("Support");
+    setFormRole("Support");
     setPassword("");
     setIsFormOpen(true);
   };
@@ -101,52 +129,97 @@ export default function AdminUsersPage() {
     setEditingUser(user);
     setName(user.name);
     setEmail(user.email);
-    setRole(user.role);
-    setPassword("");
+    setFormRole(apiRoleToFormRole[user.role]);
+    setPassword(""); // Password field is for reset/set, not display
     setIsFormOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setAdminUsers(prev => prev.filter(user => user.id !== userToDelete.id));
-    toast({
-      title: "کاربر حذف شد",
-      description: `${userToDelete.name} با موفقیت حذف شد.`,
-    });
-    setUserToDelete(null);
-    setIsSubmitting(false);
+    const originalUsers = [...adminUsers];
+    setAdminUsers(prev => prev.filter(user => user.id !== userToDelete.id)); // Optimistic update
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(`/api/v1/admin/users/${userToDelete.id}/`, { // Replace endpoint
+        method: "DELETE",
+        headers: {
+         ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+      toast({
+        title: "کاربر حذف شد",
+        description: `${userToDelete.name} با موفقیت حذف شد.`,
+      });
+    } catch (error) {
+      setAdminUsers(originalUsers); // Revert optimistic update
+      toast({
+        title: "خطا در حذف",
+        description: "امکان حذف کاربر وجود نداشت.",
+        variant: "destructive",
+      });
+    } finally {
+      setUserToDelete(null);
+      setIsSubmitting(false);
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const avatarFallback = name.split(" ").map(n => n[0]).join("").toUpperCase() || "کا";
-    
-    if (editingUser) {
-      setAdminUsers(prev => prev.map(user =>
-        user.id === editingUser.id ? { ...editingUser, name, email, role, avatarFallback } : user
-      ));
-      toast({ title: "کاربر به‌روزرسانی شد", description: `${name} به‌روزرسانی شد.` });
-      if (password) console.log(`رمز عبور برای ${email} بازنشانی شد`);
-    } else {
-      const newUser: AdminUser = {
-        id: `admin${Date.now()}`,
-        name,
-        email,
-        role,
-        lastLogin: new Date().toISOString(),
-        avatarFallback,
-      };
-      setAdminUsers(prev => [...prev, newUser]);
-      toast({ title: "کاربر اضافه شد", description: `${name} اضافه شد.` });
-      console.log(`کاربر جدید با رمز عبور ایجاد شد: ${password}`);
+    const payload: any = {
+      name,
+      email,
+      role: formRoleToApiRole[formRole],
+    };
+    if (password || !editingUser) { // Send password if setting new or creating
+      payload.password = password;
     }
-    setIsSubmitting(false);
-    setIsFormOpen(false);
+    
+    const apiEndpoint = editingUser 
+      ? `/api/v1/admin/users/${editingUser.id}/` // Replace endpoint
+      : "/api/v1/admin/users/";                // Replace endpoint
+    const method = editingUser ? "PATCH" : "POST";
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(apiEndpoint, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({detail: `خطا در ${editingUser ? 'به‌روزرسانی' : 'افزودن'} کاربر`}));
+        throw new Error(errorData.detail);
+      }
+      const savedUser = await response.json();
+      
+      if (editingUser) {
+        setAdminUsers(prev => prev.map(user => user.id === savedUser.id ? savedUser : user));
+        toast({ title: "کاربر به‌روزرسانی شد", description: `${name} با موفقیت به‌روزرسانی شد.` });
+      } else {
+        setAdminUsers(prev => [savedUser, ...prev]);
+        toast({ title: "کاربر اضافه شد", description: `${name} با موفقیت اضافه شد.` });
+      }
+      setIsFormOpen(false);
+    } catch (error: any) {
+      toast({
+        title: `خطا در ${editingUser ? 'به‌روزرسانی' : 'افزودن'} کاربر`,
+        description: error.message || "لطفا اطلاعات وارد شده را بررسی کنید.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const getRowActions = (user: AdminUser): ActionItem[] => [
@@ -155,7 +228,8 @@ export default function AdminUsersPage() {
     { label: "حذف کاربر", icon: Trash2, onClick: () => setUserToDelete(user), isDestructive: true },
   ];
   
-  const getRoleBadgeVariant = (role: AdminRole) => {
+  const getRoleBadgeVariant = (roleKey: ApiAdminRoleKey) => {
+    const role = apiRoleToFormRole[roleKey];
     if (role === "Administrator") return "default";
     if (role === "Editor") return "secondary";
     return "outline";
@@ -167,7 +241,7 @@ export default function AdminUsersPage() {
         title="مدیریت کاربران ادمین"
         description="حساب‌های مدیران و نقش‌های آن‌ها را مدیریت کنید."
         actions={
-          <Button onClick={handleAddNewUser} disabled={isSubmitting}>
+          <Button onClick={handleAddNewUser} disabled={isSubmitting || isLoadingData}>
             <PlusCircle className="ms-2 h-4 w-4" /> افزودن کاربر ادمین جدید
           </Button>
         }
@@ -181,10 +255,16 @@ export default function AdminUsersPage() {
             className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoadingData}
           />
         </div>
       </div>
-
+      {isLoadingData ? (
+         <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ms-3 text-muted-foreground">در حال بارگذاری کاربران ادمین...</p>
+        </div>
+      ) : (
       <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -197,20 +277,27 @@ export default function AdminUsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAdminUsers.map((user) => (
+             {adminUsers.length === 0 && !isLoadingData && (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  کاربر ادمینی یافت نشد.
+                </TableCell>
+              </TableRow>
+            )}
+            {adminUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${user.avatarFallback}`} alt={user.name} data-ai-hint="admin avatar" />
-                      <AvatarFallback>{user.avatarFallback}</AvatarFallback>
+                      <AvatarImage src={user.avatar_url || `https://placehold.co/40x40.png?text=${user.avatar_initials || user.name.charAt(0)}`} alt={user.name} data-ai-hint="admin avatar" />
+                      <AvatarFallback>{user.avatar_initials || user.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium">{user.name}</span>
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell><Badge variant={getRoleBadgeVariant(user.role)}>{adminRoleTranslations[user.role]}</Badge></TableCell>
-                <TableCell>{new Date(user.lastLogin).toLocaleString('fa-IR')}</TableCell>
+                <TableCell><Badge variant={getRoleBadgeVariant(user.role)}>{adminRoleTranslations[apiRoleToFormRole[user.role]]}</Badge></TableCell>
+                <TableCell>{user.last_login ? new Date(user.last_login).toLocaleString('fa-IR') : "-"}</TableCell>
                 <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(user)} />
                 </TableCell>
@@ -219,16 +306,15 @@ export default function AdminUsersPage() {
           </TableBody>
         </Table>
       </div>
-      {filteredAdminUsers.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-            کاربر ادمینی یافت نشد.
-        </div>
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isSubmitting && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-right">
             <DialogTitle>{editingUser ? "ویرایش کاربر ادمین" : "افزودن کاربر ادمین جدید"}</DialogTitle>
+             <DialogDescription>
+              {editingUser ? "مشخصات کاربر را تغییر دهید." : "یک کاربر جدید با نقش مدیریتی ایجاد کنید."}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
             <div>
@@ -240,11 +326,11 @@ export default function AdminUsersPage() {
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
-              <Label htmlFor="role">نقش</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as AdminRole)} disabled={isSubmitting}>
-                <SelectTrigger id="role"><SelectValue /></SelectTrigger>
+              <Label htmlFor="formRole">نقش</Label>
+              <Select value={formRole} onValueChange={(v) => setFormRole(v as FormAdminRole)} disabled={isSubmitting}>
+                <SelectTrigger id="formRole"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {adminRoles.map(r => <SelectItem key={r} value={r}>{adminRoleTranslations[r]}</SelectItem>)}
+                  {formAdminRoles.map(r => <SelectItem key={r} value={r}>{adminRoleTranslations[r]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

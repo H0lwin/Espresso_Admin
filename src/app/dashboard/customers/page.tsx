@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,57 +40,89 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { Search, Eye, Edit, UserX, PlusCircle, Loader2 } from "lucide-react";
+import { Search, Eye, Edit, UserX, PlusCircle, Loader2, UserCheck } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
-// Removed metadata export:
-// export const metadata: Metadata = {
-//   title: 'مدیریت مشتریان - پنل مدیریت اسپرسو اِج',
-// };
-
-interface Customer {
+interface OrderHistoryItem {
   id: string;
-  name: string;
-  email: string;
-  joinDate: string;
-  orderCount: number;
-  totalSpent: number;
-  avatarFallback: string;
-  avatarUrl?: string;
-  recentOrders?: {id: string; date: string; total: number; status: string}[];
-  isActive?: boolean;
+  date: string;
+  total: number;
+  status: string;
 }
 
-const mockCustomers: Customer[] = [
-  { id: "cust001", name: "آلیس اسمیت", email: "alice.s@example.com", joinDate: "2023-01-15", orderCount: 12, totalSpent: 345000, avatarFallback: "آا", recentOrders: [{id: "سف۱۰۱", date: "2023-10-20", total: 45000, status: "تحویل شده"}], isActive: true },
-  { id: "cust002", name: "باب جانسون", email: "b.johnson@example.net", joinDate: "2022-11-20", orderCount: 5, totalSpent: 120000, avatarFallback: "ب‌ج", avatarUrl: "https://placehold.co/40x40.png", recentOrders: [{id: "سف۱۰۲", date: "2023-10-15", total: 22500, status: "در حال پردازش"}], isActive: true },
-  { id: "cust003", name: "کارول ویلیامز", email: "carol.w@example.org", joinDate: "2023-05-01", orderCount: 25, totalSpent: 870250, avatarFallback: "ک‌و", recentOrders: [{id: "سف۱۰۳", date: "2023-10-25", total: 78000, status: "ارسال شده"}], isActive: true },
-  { id: "cust004", name: "دیوید براون", email: "david.brown@example.com", joinDate: "2021-08-10", orderCount: 3, totalSpent: 65700, avatarFallback: "دب", isActive: false },
-  { id: "cust005", name: "ایو دیویس", email: "eve.d@example.io", joinDate: "2023-08-30", orderCount: 8, totalSpent: 210000, avatarFallback: "اد", recentOrders: [{id: "سف۱۰۴", date: "2023-09-30", total: 33200, status: "تحویل شده"}], isActive: true},
-];
+interface Customer {
+  id: string | number;
+  name: string;
+  email: string;
+  join_date: string; // snake_case from API
+  order_count: number;
+  total_spent: number;
+  avatar_url?: string;
+  avatar_initials?: string;
+  recent_orders?: OrderHistoryItem[];
+  is_active: boolean;
+}
 
 export default function CustomersPage() {
   const { toast } = useToast();
-  const [customers, setCustomers] = React.useState<Customer[]>(mockCustomers);
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [customerToDeactivate, setCustomerToDeactivate] = React.useState<Customer | null>(null);
+  const [customerToToggleActive, setCustomerToToggleActive] = React.useState<Customer | null>(null);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchCustomers = async () => {
+      setIsLoadingData(true);
+      let url = "/api/v1/customers/"; // Replace with your actual endpoint
+      if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+      }
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("خطا در دریافت لیست مشتریان");
+        }
+        const data = await response.json();
+        setCustomers(data.results || []); // Assuming DRF pagination
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری لیست مشتریان وجود ندارد.",
+          variant: "destructive",
+        });
+        setCustomers([]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchCustomers();
+  }, [searchTerm, toast]);
 
-  const handleViewDetails = (customer: Customer) => {
+  const handleViewDetails = async (customer: Customer) => {
+     // Optionally fetch detailed customer data if needed
+    if (customer && !customer.recent_orders) {
+        try {
+            const response = await fetch(`/api/v1/customers/${customer.id}/`); // Detail endpoint
+            if(response.ok) {
+                const detailedCustomerData = await response.json();
+                setSelectedCustomer(detailedCustomerData);
+                return;
+            }
+        } catch (error) {
+            console.error("Failed to fetch customer details", error);
+        }
+    }
     setSelectedCustomer(customer);
   };
   
@@ -107,60 +138,111 @@ export default function CustomersPage() {
     setName(customer.name);
     setEmail(customer.email);
     setIsFormOpen(true);
-    if (selectedCustomer) setSelectedCustomer(null);
+    if (selectedCustomer && selectedCustomer.id === customer.id) setSelectedCustomer(null);
   };
   
-  const handleDeactivateConfirm = async () => {
-    if (!customerToDeactivate) return;
+  const handleToggleActiveConfirm = async () => {
+    if (!customerToToggleActive) return;
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCustomers(prev => prev.map(c => c.id === customerToDeactivate.id ? {...c, isActive: false} : c));
-    toast({
-      title: "مشتری غیرفعال شد",
-      description: `${customerToDeactivate.name} غیرفعال شد.`,
-    });
-    setSelectedCustomer(prev => prev && prev.id === customerToDeactivate.id ? {...prev, isActive: false} : prev);
-    setCustomerToDeactivate(null);
-    setIsSubmitting(false);
+    const originalCustomers = [...customers];
+    const targetStatus = !customerToToggleActive.is_active;
+
+    // Optimistic update
+    setCustomers(prev => prev.map(c => c.id === customerToToggleActive.id ? {...c, is_active: targetStatus} : c));
+    if(selectedCustomer && selectedCustomer.id === customerToToggleActive.id) {
+        setSelectedCustomer(prev => prev ? {...prev, is_active: targetStatus} : null);
+    }
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(`/api/v1/customers/${customerToToggleActive.id}/toggle-active/`, { // Replace with your actual endpoint
+        method: "PATCH", // Or POST, depending on API design
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify({ is_active: targetStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${targetStatus ? 'activate' : 'deactivate'} customer`);
+      }
+      const updatedCustomer = await response.json();
+      setCustomers(prev => prev.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+       if(selectedCustomer && selectedCustomer.id === updatedCustomer.id) {
+         setSelectedCustomer(updatedCustomer);
+       }
+      toast({
+        title: `مشتری ${targetStatus ? 'فعال' : 'غیرفعال'} شد`,
+        description: `${customerToToggleActive.name} با موفقیت ${targetStatus ? 'فعال' : 'غیرفعال'} شد.`,
+      });
+    } catch (error) {
+      setCustomers(originalCustomers); // Revert optimistic update
+      if(selectedCustomer && selectedCustomer.id === customerToToggleActive.id) {
+          const originalSelected = originalCustomers.find(c => c.id === customerToToggleActive.id);
+          setSelectedCustomer(originalSelected || null);
+      }
+      toast({
+        title: "خطا",
+        description: `عدم موفقیت در ${targetStatus ? 'فعال' : 'غیرفعال'} کردن مشتری.`,
+        variant: "destructive",
+      });
+    } finally {
+      setCustomerToToggleActive(null);
+      setIsSubmitting(false);
+    }
   };
 
-  const handleActivateConfirm = async (customer: Customer) => {
-    setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCustomers(prev => prev.map(c => c.id === customer.id ? {...c, isActive: true} : c));
-    toast({ title: "مشتری فعال شد", description: `${customer.name} فعال شد.`});
-    setSelectedCustomer(prev => prev && prev.id === customer.id ? {...prev, isActive: true} : prev);
-    setIsSubmitting(false);
-  }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const customerData = { 
+    const customerPayload = { 
       name, 
-      email, 
-      avatarFallback: name.split(" ").map(n => n[0]).join("").toUpperCase() || "XX" 
+      email,
     };
+    
+    const apiEndpoint = editingCustomer 
+      ? `/api/v1/customers/${editingCustomer.id}/` // Replace with your actual endpoint
+      : "/api/v1/customers/";                   // Replace with your actual endpoint
+    const method = editingCustomer ? "PATCH" : "POST";
 
-    if (editingCustomer) {
-      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? {...editingCustomer, ...customerData} : c));
-      toast({ title: "مشتری به‌روزرسانی شد", description: `${name} به‌روزرسانی شد.`});
-    } else {
-      const newCustomer: Customer = {
-        id: `cust${Date.now()}`,
-        ...customerData,
-        joinDate: new Date().toISOString().split("T")[0],
-        orderCount: 0,
-        totalSpent: 0,
-        isActive: true,
-      };
-      setCustomers(prev => [newCustomer, ...prev]);
-      toast({ title: "مشتری اضافه شد", description: `${name} اضافه شد.`});
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(apiEndpoint, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(customerPayload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({detail: `خطا در ${editingCustomer ? 'به‌روزرسانی' : 'افزودن'} مشتری`}));
+        throw new Error(errorData.detail);
+      }
+      const savedCustomer = await response.json();
+
+      if (editingCustomer) {
+        setCustomers(prev => prev.map(c => c.id === savedCustomer.id ? savedCustomer : c));
+        toast({ title: "مشتری به‌روزرسانی شد", description: `${name} با موفقیت به‌روزرسانی شد.`});
+      } else {
+        setCustomers(prev => [savedCustomer, ...prev]);
+        toast({ title: "مشتری اضافه شد", description: `${name} با موفقیت اضافه شد.`});
+      }
+      setIsFormOpen(false);
+    } catch (error: any) {
+      toast({
+        title: `خطا در ${editingCustomer ? 'به‌روزرسانی' : 'افزودن'} مشتری`,
+        description: error.message || "لطفا اطلاعات وارد شده را بررسی کنید.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    setIsFormOpen(false);
   };
 
   const getRowActions = (customer: Customer): ActionItem[] => [
@@ -168,16 +250,10 @@ export default function CustomersPage() {
     { label: "ویرایش مشتری", icon: Edit, onClick: () => handleOpenEditForm(customer) },
     { label: "---" },
     { 
-      label: customer.isActive ? "غیرفعال کردن حساب" : "فعال کردن حساب", 
-      icon: UserX, 
-      onClick: () => {
-        if (customer.isActive) {
-          setCustomerToDeactivate(customer);
-        } else {
-          handleActivateConfirm(customer);
-        }
-      },
-      isDestructive: !!customer.isActive 
+      label: customer.is_active ? "غیرفعال کردن حساب" : "فعال کردن حساب", 
+      icon: customer.is_active ? UserX : UserCheck, 
+      onClick: () => setCustomerToToggleActive(customer),
+      isDestructive: !!customer.is_active 
     },
   ];
 
@@ -187,7 +263,7 @@ export default function CustomersPage() {
         title="مدیریت مشتریان"
         description="مشاهده و مدیریت پایگاه مشتریان خود."
          actions={
-          <Button onClick={handleOpenAddForm} disabled={isSubmitting}>
+          <Button onClick={handleOpenAddForm} disabled={isSubmitting || isLoadingData}>
             <PlusCircle className="ms-2 h-4 w-4" /> افزودن مشتری جدید
           </Button>
         }
@@ -202,10 +278,16 @@ export default function CustomersPage() {
             className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoadingData}
           />
         </div>
       </div>
-
+      {isLoadingData ? (
+         <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ms-3 text-muted-foreground">در حال بارگذاری مشتریان...</p>
+        </div>
+      ) : (
       <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -220,24 +302,31 @@ export default function CustomersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCustomers.map((customer) => (
-              <TableRow key={customer.id} className={!customer.isActive ? "opacity-60" : ""}>
+            {customers.length === 0 && !isLoadingData && (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  مشتری یافت نشد.
+                </TableCell>
+              </TableRow>
+            )}
+            {customers.map((customer) => (
+              <TableRow key={customer.id} className={!customer.is_active ? "opacity-60" : ""}>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={customer.avatarUrl || `https://placehold.co/40x40.png?text=${customer.avatarFallback}`} alt={customer.name} data-ai-hint="customer avatar" />
-                      <AvatarFallback>{customer.avatarFallback}</AvatarFallback>
+                      <AvatarImage src={customer.avatar_url || `https://placehold.co/40x40.png?text=${customer.avatar_initials || customer.name.charAt(0)}`} alt={customer.name} data-ai-hint="customer avatar" />
+                      <AvatarFallback>{customer.avatar_initials || customer.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium">{customer.name}</span>
                   </div>
                 </TableCell>
                 <TableCell>{customer.email}</TableCell>
-                <TableCell>{new Date(customer.joinDate).toLocaleDateString('fa-IR')}</TableCell>
-                <TableCell>{customer.orderCount}</TableCell>
-                <TableCell className="text-left">{customer.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
+                <TableCell>{new Date(customer.join_date).toLocaleDateString('fa-IR')}</TableCell>
+                <TableCell>{customer.order_count}</TableCell>
+                <TableCell className="text-left">{customer.total_spent.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell>
-                  <Badge variant={customer.isActive ? "default" : "outline"}>
-                    {customer.isActive ? "فعال" : "غیرفعال"}
+                  <Badge variant={customer.is_active ? "default" : "outline"}>
+                    {customer.is_active ? "فعال" : "غیرفعال"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-left">
@@ -248,10 +337,6 @@ export default function CustomersPage() {
           </TableBody>
         </Table>
       </div>
-      {filteredCustomers.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-            مشتری با معیارهای شما یافت نشد.
-        </div>
       )}
 
       <Sheet open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
@@ -261,14 +346,14 @@ export default function CustomersPage() {
               <SheetHeader className="p-6 border-b text-right">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
-                    <AvatarImage src={selectedCustomer.avatarUrl || `https://placehold.co/64x64.png?text=${selectedCustomer.avatarFallback}`} alt={selectedCustomer.name} data-ai-hint="user avatar" />
-                    <AvatarFallback className="text-2xl">{selectedCustomer.avatarFallback}</AvatarFallback>
+                    <AvatarImage src={selectedCustomer.avatar_url || `https://placehold.co/64x64.png?text=${selectedCustomer.avatar_initials || selectedCustomer.name.charAt(0)}`} alt={selectedCustomer.name} data-ai-hint="user avatar" />
+                    <AvatarFallback className="text-2xl">{selectedCustomer.avatar_initials || selectedCustomer.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
                     <SheetTitle className="text-2xl">{selectedCustomer.name}</SheetTitle>
                     <SheetDescription>{selectedCustomer.email}</SheetDescription>
-                    <Badge variant={selectedCustomer.isActive ? "default" : "outline"} className="mt-1">
-                      {selectedCustomer.isActive ? "فعال" : "غیرفعال"}
+                    <Badge variant={selectedCustomer.is_active ? "default" : "outline"} className="mt-1">
+                      {selectedCustomer.is_active ? "فعال" : "غیرفعال"}
                     </Badge>
                   </div>
                 </div>
@@ -277,21 +362,21 @@ export default function CustomersPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">جزئیات حساب</h3>
                   <div className="space-y-1 text-sm">
-                    <p><strong>عضویت:</strong> {new Date(selectedCustomer.joinDate).toLocaleDateString('fa-IR')}</p>
-                    <p><strong>تعداد سفارشات:</strong> {selectedCustomer.orderCount}</p>
-                    <p><strong>مجموع خرید:</strong> {selectedCustomer.totalSpent.toLocaleString('fa-IR')} تومان</p>
+                    <p><strong>عضویت:</strong> {new Date(selectedCustomer.join_date).toLocaleDateString('fa-IR')}</p>
+                    <p><strong>تعداد سفارشات:</strong> {selectedCustomer.order_count}</p>
+                    <p><strong>مجموع خرید:</strong> {selectedCustomer.total_spent.toLocaleString('fa-IR')} تومان</p>
                   </div>
                 </div>
                 <Separator />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">تاریخچه سفارشات اخیر</h3>
-                  {selectedCustomer.recentOrders && selectedCustomer.recentOrders.length > 0 ? (
+                  {selectedCustomer.recent_orders && selectedCustomer.recent_orders.length > 0 ? (
                     <ul className="space-y-3">
-                      {selectedCustomer.recentOrders.map(order => (
+                      {selectedCustomer.recent_orders.map(order => (
                         <li key={order.id} className="text-sm p-3 rounded-md border bg-muted/50">
                           <div className="flex justify-between items-center">
                             <span className="font-medium">سفارش {order.id}</span>
-                            <Badge variant={order.status === "تحویل شده" ? "default" : "secondary"}>{order.status}</Badge>
+                            <Badge variant={order.status === "Delivered" || order.status === "تحویل شده" ? "default" : "secondary"}>{order.status}</Badge>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {new Date(order.date).toLocaleDateString('fa-IR')} - {order.total.toLocaleString('fa-IR')} تومان
@@ -308,16 +393,14 @@ export default function CustomersPage() {
                  <Button onClick={() => handleOpenEditForm(selectedCustomer)} disabled={isSubmitting}>
                    <Edit className="ms-2 h-4 w-4" /> ویرایش مشتری
                  </Button>
-                 {selectedCustomer.isActive && (
-                    <Button variant="destructive" onClick={() => { setCustomerToDeactivate(selectedCustomer); setSelectedCustomer(null); }} disabled={isSubmitting}>
-                        <UserX className="ms-2 h-4 w-4" /> غیرفعال کردن
-                    </Button>
-                 )}
-                  {!selectedCustomer.isActive && (
-                    <Button onClick={() => handleActivateConfirm(selectedCustomer)} disabled={isSubmitting}>
-                       {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />} فعال کردن
-                    </Button>
-                  )}
+                 <Button 
+                    variant={selectedCustomer.is_active ? "destructive" : "default"} 
+                    onClick={() => { setCustomerToToggleActive(selectedCustomer); }} 
+                    disabled={isSubmitting}
+                  >
+                    {selectedCustomer.is_active ? <UserX className="ms-2 h-4 w-4" /> : <UserCheck className="ms-2 h-4 w-4" />}
+                    {selectedCustomer.is_active ? "غیرفعال کردن" : "فعال کردن"}
+                  </Button>
                  <Button variant="outline" onClick={() => setSelectedCustomer(null)}>بستن</Button>
               </SheetFooter>
             </>
@@ -350,20 +433,24 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!customerToDeactivate} onOpenChange={(open) => !open && setCustomerToDeactivate(null)}>
+      <AlertDialog open={!!customerToToggleActive} onOpenChange={(open) => !open && setCustomerToToggleActive(null)}>
         <AlertDialogContent className="text-right">
           <AlertDialogHeader>
             <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
             <AlertDialogDescription>
-              این اقدام کاربر {customerToDeactivate?.name} را غیرفعال خواهد کرد. او ممکن است دسترسی به برخی ویژگی‌ها را از دست بدهد.
+              این اقدام کاربر {customerToToggleActive?.name} را {customerToToggleActive?.is_active ? "غیرفعال" : "فعال"} خواهد کرد.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-start">
-            <AlertDialogAction onClick={handleDeactivateConfirm} disabled={isSubmitting} className={buttonVariants({variant: "destructive"})}>
+            <AlertDialogAction 
+              onClick={handleToggleActiveConfirm} 
+              disabled={isSubmitting} 
+              className={buttonVariants({variant: customerToToggleActive?.is_active ? "destructive" : "default"})}
+            >
               {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
-              غیرفعال کردن
+              {customerToToggleActive?.is_active ? "غیرفعال کردن" : "فعال کردن"}
             </AlertDialogAction>
-            <AlertDialogCancel onClick={() => setCustomerToDeactivate(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setCustomerToToggleActive(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

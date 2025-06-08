@@ -16,6 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import {
   Accordion,
@@ -24,164 +25,219 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
 interface TimelineEvent {
-  id: string;
+  id: string | number; // Can be string for temp client-side IDs
   year: string;
   title: string;
   description: string;
 }
 
 interface TeamMember {
-  id: string;
+  id: string | number;
   name: string;
   role: string;
   bio: string;
-  imageUrl: string;
-  imageFile?: File | null;
+  image_url: string;
+  // imageFile for frontend handling only
+}
+
+interface AboutPageData {
+  timeline_events: TimelineEvent[];
+  team_members: TeamMember[];
+  // Potentially other sections like "Our Mission", "Our Vision"
+  // our_mission?: string;
+  // page_intro_text?: string;
 }
 
 export default function CmsAboutPage() {
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [isTimelineFormSaving, setIsTimelineFormSaving] = React.useState(false);
-  const [isTeamFormSaving, setIsTeamFormSaving] = React.useState(false);
+  const [isSavingAll, setIsSavingAll] = React.useState(false); // For the main save button
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
-
-  // وضعیت تایم‌لاین
-  const [timelineEvents, setTimelineEvents] = React.useState<TimelineEvent[]>([
-    { id: "t1", year: "۲۰۱۸", title: "تاسیس اسپرسو اِج", description: "سفر ما با اشتیاق به قهوه بی‌نقص آغاز شد." },
-    { id: "t2", year: "۲۰۲۰", title: "افتتاح اولین فروشگاه اصلی", description: "گسترش به اولین مکان فیزیکی، خدمت‌رسانی به جامعه محلی." },
-    { id: "t3", year: "۲۰۲۲", title: "راه‌اندازی فروشگاه آنلاین", description: "عرضه ترکیبات و محصولات ویژه به مشتریان سراسر کشور." },
-  ]);
+  // Timeline State
+  const [timelineEvents, setTimelineEvents] = React.useState<TimelineEvent[]>([]);
   const [isTimelineFormOpen, setIsTimelineFormOpen] = React.useState(false);
   const [editingTimelineEvent, setEditingTimelineEvent] = React.useState<TimelineEvent | null>(null);
   const [timelineYear, setTimelineYear] = React.useState("");
   const [timelineTitle, setTimelineTitle] = React.useState("");
   const [timelineDescription, setTimelineDescription] = React.useState("");
+  const [isTimelineFormSaving, setIsTimelineFormSaving] = React.useState(false);
 
-  // وضعیت اعضای تیم
-  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([
-    { id: "tm1", name: "سارا احمدی", role: "موسس و مدیرعامل", bio: "سارا اسپرسو اِج را با چشم‌اندازی برای کیفیت و جامعه رهبری می‌کند.", imageUrl: "https://placehold.co/150x150.png" },
-    { id: "tm2", name: "علی رضایی", role: "باریستای ارشد", bio: "علی استاد پشت ترکیبات ویژه ماست و تیم ما را به کمال آموزش می‌دهد.", imageUrl: "https://placehold.co/150x150.png" },
-  ]);
+  // Team Members State
+  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([]);
   const [isTeamFormOpen, setIsTeamFormOpen] = React.useState(false);
   const [editingTeamMember, setEditingTeamMember] = React.useState<TeamMember | null>(null);
   const [memberName, setMemberName] = React.useState("");
   const [memberRole, setMemberRole] = React.useState("");
   const [memberBio, setMemberBio] = React.useState("");
-  const [memberImagePreview, setMemberImagePreview] = React.useState<string | null>(null);
+  const [memberImagePreview, setMemberImagePreview] = React.useState<string | null>("https://placehold.co/150x150.png");
   const [memberImageFile, setMemberImageFile] = React.useState<File | null>(null);
+  const [isTeamFormSaving, setIsTeamFormSaving] = React.useState(false);
 
 
-  // مدیریت تایم‌لاین
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch("/api/v1/cms/about/"); // Replace with your actual endpoint
+        if (!response.ok) throw new Error("Failed to fetch About Us page data");
+        const data: AboutPageData = await response.json();
+        setTimelineEvents(data.timeline_events || []);
+        setTeamMembers(data.team_members || []);
+      } catch (error) {
+        toast({
+          title: "خطا در بارگذاری اطلاعات",
+          description: "امکان دریافت اطلاعات صفحه درباره ما وجود ندارد.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchData();
+  }, [toast]);
+
+  // Timeline Event Handlers
   const handleAddTimelineEvent = () => {
-    setEditingTimelineEvent(null);
-    setTimelineYear("");
-    setTimelineTitle("");
-    setTimelineDescription("");
+    setEditingTimelineEvent(null); setTimelineYear(""); setTimelineTitle(""); setTimelineDescription("");
     setIsTimelineFormOpen(true);
   };
-
   const handleEditTimelineEvent = (event: TimelineEvent) => {
-    setEditingTimelineEvent(event);
-    setTimelineYear(event.year);
-    setTimelineTitle(event.title);
-    setTimelineDescription(event.description);
+    setEditingTimelineEvent(event); setTimelineYear(event.year); setTimelineTitle(event.title); setTimelineDescription(event.description);
     setIsTimelineFormOpen(true);
   };
-
-  const handleDeleteTimelineEvent = (eventId: string) => {
+  // Note: Individual delete will be part of the main save. If immediate delete is needed, it requires an API call.
+  const handleDeleteTimelineEvent = (eventId: string | number) => {
     setTimelineEvents(prev => prev.filter(event => event.id !== eventId));
-    toast({ title: "رویداد تایم‌لاین حذف شد" });
+    // No toast here, changes saved with main button
   };
-
-  const handleTimelineFormSubmit = async (e: React.FormEvent) => {
+  const handleTimelineFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsTimelineFormSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // This form now just updates local state. Actual save happens with "Save All Changes" button.
+    const newEvent = { id: editingTimelineEvent ? editingTimelineEvent.id : `temp-t-${Date.now()}`, year: timelineYear, title: timelineTitle, description: timelineDescription };
     if (editingTimelineEvent) {
-      setTimelineEvents(prev => prev.map(event => event.id === editingTimelineEvent.id ? { ...editingTimelineEvent, year: timelineYear, title: timelineTitle, description: timelineDescription } : event));
-      toast({ title: "رویداد تایم‌لاین به‌روزرسانی شد" });
+      setTimelineEvents(prev => prev.map(event => event.id === editingTimelineEvent.id ? newEvent : event));
     } else {
-      setTimelineEvents(prev => [...prev, { id: `t${Date.now()}`, year: timelineYear, title: timelineTitle, description: timelineDescription }]);
-      toast({ title: "رویداد تایم‌لاین اضافه شد" });
+      setTimelineEvents(prev => [...prev, newEvent]);
     }
-    setIsTimelineFormSaving(false);
     setIsTimelineFormOpen(false);
+    // No toast, as this is local state update
   };
 
-  // مدیریت اعضای تیم
+
+  // Team Member Handlers
   const handleAddTeamMember = () => {
-    setEditingTeamMember(null);
-    setMemberName("");
-    setMemberRole("");
-    setMemberBio("");
-    setMemberImagePreview("https://placehold.co/150x150.png");
-    setMemberImageFile(null);
+    setEditingTeamMember(null); setMemberName(""); setMemberRole(""); setMemberBio(""); 
+    setMemberImagePreview("https://placehold.co/150x150.png"); setMemberImageFile(null);
     setIsTeamFormOpen(true);
   };
-
   const handleEditTeamMember = (member: TeamMember) => {
-    setEditingTeamMember(member);
-    setMemberName(member.name);
-    setMemberRole(member.role);
-    setMemberBio(member.bio);
-    setMemberImagePreview(member.imageUrl);
-    setMemberImageFile(null);
+    setEditingTeamMember(member); setMemberName(member.name); setMemberRole(member.role); setMemberBio(member.bio);
+    setMemberImagePreview(member.image_url); setMemberImageFile(null);
     setIsTeamFormOpen(true);
   };
-
-  const handleDeleteTeamMember = (memberId: string) => {
-    setTeamMembers(prev => prev.filter(member => member.id !== memberId));
-    toast({ title: "عضو تیم حذف شد" });
-  };
-
   const handleTeamMemberImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setMemberImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMemberImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) { setMemberImageFile(file); const reader = new FileReader(); reader.onloadend = () => setMemberImagePreview(reader.result as string); reader.readAsDataURL(file); }
+  };
+  // Note: Individual delete will be part of the main save.
+  const handleDeleteTeamMember = (memberId: string | number) => {
+    setTeamMembers(prev => prev.filter(member => member.id !== memberId));
   };
 
-  const handleTeamFormSubmit = async (e: React.FormEvent) => {
+  const handleTeamFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsTeamFormSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // This form now just updates local state. Actual save happens with "Save All Changes" button.
     const memberData = { 
-      name: memberName, 
-      role: memberRole, 
-      bio: memberBio, 
-      imageUrl: memberImagePreview || "https://placehold.co/150x150.png",
-      imageFile: memberImageFile
+      id: editingTeamMember ? editingTeamMember.id : `temp-m-${Date.now()}`,
+      name: memberName, role: memberRole, bio: memberBio, 
+      image_url: memberImagePreview || "https://placehold.co/150x150.png",
+      // We will handle imageFile separately during the main save
     };
+    
+    // Store the file with the member object if it's a new image
+    const memberWithFile = { ...memberData, _imageFile: memberImageFile };
+
+
     if (editingTeamMember) {
-      setTeamMembers(prev => prev.map(member => member.id === editingTeamMember.id ? { ...editingTeamMember, ...memberData } : member));
-      toast({ title: "عضو تیم به‌روزرسانی شد" });
+      setTeamMembers(prev => prev.map(member => member.id === editingTeamMember.id ? memberWithFile : member));
     } else {
-      setTeamMembers(prev => [...prev, { id: `tm${Date.now()}`, ...memberData }]);
-      toast({ title: "عضو تیم اضافه شد" });
+      setTeamMembers(prev => [...prev, memberWithFile]);
     }
-    setIsTeamFormSaving(false);
     setIsTeamFormOpen(false);
+    setMemberImageFile(null); // Reset file after adding to local state
   };
   
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("ذخیره اطلاعات صفحه درباره ما:", { timelineEvents, teamMembers });
-    toast({
-      title: "تغییرات ذخیره شد",
-      description: "اطلاعات صفحه درباره ما با موفقیت ذخیره شد.",
-    });
-    setIsSaving(false);
+  const handleSaveAllChanges = async () => {
+    setIsSavingAll(true);
+    
+    const payload = {
+        timeline_events: timelineEvents.map(e => ({...e, id: typeof e.id === 'string' && e.id.startsWith('temp-') ? undefined : e.id })),
+        team_members_data: teamMembers.map(m => {
+            const memberPayload: any = { name: m.name, role: m.role, bio: m.bio };
+            if (typeof m.id === 'number' || (typeof m.id === 'string' && !m.id.startsWith('temp-'))) {
+                memberPayload.id = m.id;
+            }
+            // The image file will be handled separately if your API supports it in the same request,
+            // or you might need separate endpoints for image uploads per team member.
+            // For simplicity, this example assumes image URLs are updated if new image file is not present,
+            // and new images are uploaded. This part is highly dependent on API design.
+            return memberPayload;
+        }),
+        // This is simplified. For actual file uploads with items, you'd typically use FormData for the whole request,
+        // or upload images individually and then send their URLs.
+    };
+
+    // This example assumes you're sending JSON and image URLs.
+    // If you need to upload files within this save, the entire request should be FormData.
+    // This would require restructuring how team_members_data is built.
+    // For now, let's assume image URLs are handled by direct input or previous uploads.
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch("/api/v1/cms/about/", { // Replace with your actual endpoint
+        method: "PATCH", // Or PUT/POST
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({detail: "خطا در ذخیره اطلاعات"}));
+        throw new Error(errorData.detail || "Failed to save About Us data");
+      }
+      
+      const updatedData: AboutPageData = await response.json();
+      setTimelineEvents(updatedData.timeline_events || []);
+      setTeamMembers(updatedData.team_members || []); // Assuming API returns updated list with IDs
+
+      toast({
+        title: "تغییرات ذخیره شد",
+        description: "اطلاعات صفحه درباره ما با موفقیت ذخیره شد.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "خطا در ذخیره‌سازی",
+        description: error.message || "امکان ذخیره اطلاعات صفحه درباره ما وجود نداشت.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAll(false);
+    }
   };
 
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="ms-4 text-lg">در حال بارگذاری اطلاعات صفحه درباره ما...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -189,20 +245,19 @@ export default function CmsAboutPage() {
         title="CMS: صفحه درباره ما"
         description="محتوای صفحه درباره ما، شامل تایم‌لاین شرکت و اعضای تیم را مدیریت کنید."
         actions={
-          <Button onClick={handleSaveChanges} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
-            {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
-            {isSaving ? "در حال ذخیره..." : "ذخیره تمام تغییرات"}
+          <Button onClick={handleSaveAllChanges} disabled={isSavingAll || isTimelineFormSaving || isTeamFormSaving || isLoadingData}>
+            {isSavingAll ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
+            {isSavingAll ? "در حال ذخیره..." : "ذخیره تمام تغییرات"}
           </Button>
         }
       />
 
       <Accordion type="multiple" defaultValue={["timeline", "team"]} className="w-full space-y-4">
-        {/* بخش تایم‌لاین شرکت */}
         <AccordionItem value="timeline">
           <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">تایم‌لاین شرکت</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="mb-4">
-              <Button onClick={handleAddTimelineEvent} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+              <Button onClick={handleAddTimelineEvent} disabled={isSavingAll || isLoadingData}>
                 <PlusCircle className="ml-2 h-4 w-4" /> افزودن رویداد تایم‌لاین
               </Button>
             </div>
@@ -213,10 +268,10 @@ export default function CmsAboutPage() {
                     <div className="flex justify-between items-center">
                       <CardTitle>{event.year} - {event.title}</CardTitle>
                       <div className="space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditTimelineEvent(event)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditTimelineEvent(event)} disabled={isSavingAll || isLoadingData}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteTimelineEvent(event.id)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteTimelineEvent(event.id)} disabled={isSavingAll || isLoadingData}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -232,12 +287,11 @@ export default function CmsAboutPage() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* بخش اعضای تیم */}
         <AccordionItem value="team">
           <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">اعضای تیم</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="mb-4">
-              <Button onClick={handleAddTeamMember} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+              <Button onClick={handleAddTeamMember} disabled={isSavingAll || isLoadingData}>
                 <UserPlus className="ml-2 h-4 w-4" /> افزودن عضو تیم
               </Button>
             </div>
@@ -245,17 +299,17 @@ export default function CmsAboutPage() {
               {teamMembers.map(member => (
                 <Card key={member.id} className="shadow">
                   <CardHeader className="items-center text-center">
-                    <Image src={member.imageUrl} alt={member.name} width={100} height={100} className="rounded-full mb-2 border" data-ai-hint="team member" />
+                    <Image src={member.image_url || "https://placehold.co/100x100.png"} alt={member.name} width={100} height={100} className="rounded-full mb-2 border" data-ai-hint="team member" />
                     <CardTitle>{member.name}</CardTitle>
                     <CardDescription>{member.role}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground text-center mb-4">{member.bio}</p>
                     <div className="flex justify-center space-x-2 space-x-reverse">
-                      <Button variant="outline" size="sm" onClick={() => handleEditTeamMember(member)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                      <Button variant="outline" size="sm" onClick={() => handleEditTeamMember(member)} disabled={isSavingAll || isLoadingData}>
                         <Edit className="ml-1 h-3 w-3" /> ویرایش
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteTeamMember(member.id)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteTeamMember(member.id)} disabled={isSavingAll || isLoadingData}>
                         <Trash2 className="ml-1 h-3 w-3" /> حذف
                       </Button>
                     </div>
@@ -268,9 +322,7 @@ export default function CmsAboutPage() {
         </AccordionItem>
       </Accordion>
 
-
-      {/* دیالوگ فرم رویداد تایم‌لاین */}
-      <Dialog open={isTimelineFormOpen} onOpenChange={setIsTimelineFormOpen}>
+      <Dialog open={isTimelineFormOpen} onOpenChange={(open) => !isTimelineFormSaving && setIsTimelineFormOpen(open)}>
         <DialogContent>
           <DialogHeader className="text-right">
             <DialogTitle>{editingTimelineEvent ? "ویرایش رویداد تایم‌لاین" : "افزودن رویداد جدید به تایم‌لاین"}</DialogTitle>
@@ -291,16 +343,15 @@ export default function CmsAboutPage() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsTimelineFormOpen(false)} disabled={isTimelineFormSaving}>انصراف</Button>
               <Button type="submit" disabled={isTimelineFormSaving}>
-                {isTimelineFormSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                {editingTimelineEvent ? "ذخیره تغییرات" : "افزودن رویداد"}
+                {/* No spinner here as it's local state update */}
+                {editingTimelineEvent ? "ذخیره تغییرات محلی" : "افزودن محلی"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* دیالوگ فرم عضو تیم */}
-      <Dialog open={isTeamFormOpen} onOpenChange={setIsTeamFormOpen}>
+      <Dialog open={isTeamFormOpen} onOpenChange={(open) => !isTeamFormSaving && setIsTeamFormOpen(open)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-right">
             <DialogTitle>{editingTeamMember ? "ویرایش عضو تیم" : "افزودن عضو جدید به تیم"}</DialogTitle>
@@ -319,7 +370,7 @@ export default function CmsAboutPage() {
               <Textarea id="memberBio" value={memberBio} onChange={(e) => setMemberBio(e.target.value)} required disabled={isTeamFormSaving}/>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memberImageUpload">تصویر پروفایل</Label>
+              <Label htmlFor="memberImageUploadInput">تصویر پروفایل</Label>
                <div className="flex items-center gap-4">
                 {memberImagePreview && <Image src={memberImagePreview} alt="پیش‌نمایش" width={80} height={80} className="rounded-full object-cover border" data-ai-hint="profile image" />}
                 <Input id="memberImageUploadInput" type="file" onChange={handleTeamMemberImageUpload} accept="image/*" className="hidden" />
@@ -331,8 +382,8 @@ export default function CmsAboutPage() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsTeamFormOpen(false)} disabled={isTeamFormSaving}>انصراف</Button>
               <Button type="submit" disabled={isTeamFormSaving}>
-                {isTeamFormSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                {editingTeamMember ? "ذخیره تغییرات" : "افزودن عضو"}
+                 {/* No spinner here as it's local state update */}
+                {editingTeamMember ? "ذخیره تغییرات محلی" : "افزودن محلی"}
               </Button>
             </DialogFooter>
           </form>
@@ -341,5 +392,3 @@ export default function CmsAboutPage() {
     </>
   );
 }
-
-    

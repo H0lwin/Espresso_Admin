@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/shared/logo";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "لطفا یک آدرس ایمیل معتبر وارد کنید." }),
@@ -31,6 +33,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
 
@@ -44,11 +47,42 @@ export default function LoginPage() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    // On successful login:
-    router.push("/dashboard");
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch("/api/v1/auth/login/", { // Replace with your actual login endpoint
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (response.ok) {
+        // Assuming the API returns some user data or a success message
+        // const data = await response.json(); 
+        toast({
+          title: "ورود موفق",
+          description: "با موفقیت وارد شدید.",
+        });
+        router.push("/dashboard");
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: "ایمیل یا رمز عبور نامعتبر است." }));
+        toast({
+          title: "خطا در ورود",
+          description: errorData.detail || "ایمیل یا رمز عبور نامعتبر است.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطا در ارتباط",
+        description: "مشکلی در اتصال به سرور رخ داده است. لطفا دوباره تلاش کنید.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

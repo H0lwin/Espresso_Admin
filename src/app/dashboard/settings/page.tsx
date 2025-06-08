@@ -6,8 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Link as LinkIcon, Trash2, Loader2 } from "lucide-react";
+import { Save, Link as LinkIcon, Trash2, Loader2, PlusCircle } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -15,48 +14,127 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
 interface SocialLink {
-  id: string;
+  id: string | number; // Can be number if DB uses auto-increment PK
   platform: string;
   url: string;
+}
+
+interface SiteSettings {
+  social_links: SocialLink[];
+  // Add other settings groups here, e.g., store_settings, general_settings
 }
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
-  const [socialLinks, setSocialLinks] = React.useState<SocialLink[]>([
-    { id: "sl1", platform: "فیسبوک", url: "https://facebook.com/espressoedge" },
-    { id: "sl2", platform: "اینستاگرام", url: "https://instagram.com/espressoedge" },
-    { id: "sl3", platform: "توییتر", url: "https://twitter.com/espressoedge" },
-  ]);
+  const [socialLinks, setSocialLinks] = React.useState<SocialLink[]>([]);
   
-  const handleSocialLinkChange = (index: number, field: keyof SocialLink, value: string) => {
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch("/api/v1/settings/site/"); // Replace with your actual endpoint
+        if (!response.ok) {
+          throw new Error("خطا در دریافت تنظیمات سایت");
+        }
+        const data: SiteSettings = await response.json();
+        setSocialLinks(data.social_links || []);
+        // Set other settings groups here
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری تنظیمات سایت وجود ندارد.",
+          variant: "destructive",
+        });
+        setSocialLinks([]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchSettings();
+  }, [toast]);
+
+
+  const handleSocialLinkChange = (index: number, field: keyof Omit<SocialLink, 'id'>, value: string) => {
     const newLinks = [...socialLinks];
     (newLinks[index] as any)[field] = value;
     setSocialLinks(newLinks);
   };
   
   const addSocialLink = () => {
-    setSocialLinks([...socialLinks, {id: `sl${Date.now()}`, platform: "", url: ""}]);
+    // For new links, use a temporary client-side ID like `new-${Date.now()}`
+    // The backend will assign a proper ID upon saving.
+    setSocialLinks([...socialLinks, {id: `new-${Date.now()}`, platform: "", url: ""}]);
   };
 
-  const removeSocialLink = (id: string) => {
-    setSocialLinks(socialLinks.filter(link => link.id !== id));
+  const removeSocialLink = (idToRemove: string | number) => {
+    setSocialLinks(socialLinks.filter(link => link.id !== idToRemove));
+    // If the link has a persistent ID (not `new-`), you might want to mark it for deletion
+    // or make a DELETE request immediately if your API supports it.
+    // For simplicity here, we'll handle deletions in the main save operation.
   };
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Prepare payload for API. Distinguish new links from existing ones.
+    const payload = {
+      social_links: socialLinks.map(link => ({
+        id: typeof link.id === 'string' && link.id.startsWith('new-') ? undefined : link.id, // Send ID only for existing
+        platform: link.platform,
+        url: link.url,
+      })),
+      // include other settings groups
+    };
 
-    console.log("ذخیره تنظیمات:", { socialLinks });
-    toast({
-      title: "تنظیمات ذخیره شد",
-      description: "تنظیمات سایت شما با موفقیت به‌روزرسانی شد.",
-    });
-    setIsSaving(false);
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch("/api/v1/settings/site/", { // Replace with your actual endpoint
+        method: "PATCH", // Or PUT
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({detail: "خطا در ذخیره تنظیمات"}));
+        throw new Error(errorData.detail || "Failed to save settings");
+      }
+      
+      const updatedSettings: SiteSettings = await response.json();
+      setSocialLinks(updatedSettings.social_links || []);
+      // Update other settings groups from response
+
+      toast({
+        title: "تنظیمات ذخیره شد",
+        description: "تنظیمات سایت شما با موفقیت به‌روزرسانی شد.",
+      });
+    } catch (error: any) {
+       toast({
+        title: "خطا در ذخیره‌سازی",
+        description: error.message || "امکان ذخیره تنظیمات وجود نداشت.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="ms-4 text-lg">در حال بارگذاری تنظیمات...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -64,7 +142,7 @@ export default function SettingsPage() {
         title="تنظیمات سایت"
         description="تنظیمات عمومی وب‌سایت و فروشگاه خود را پیکربندی کنید."
         actions={
-          <Button onClick={handleSaveChanges} disabled={isSaving}>
+          <Button onClick={handleSaveChanges} disabled={isSaving || isLoadingData}>
             {isSaving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
             {isSaving ? "در حال ذخیره..." : "ذخیره تمام تغییرات"}
           </Button>
@@ -107,10 +185,18 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addSocialLink} disabled={isSaving}>افزودن لینک شبکه اجتماعی</Button>
+              <Button type="button" variant="outline" onClick={addSocialLink} disabled={isSaving}>
+                <PlusCircle className="ms-2 h-4 w-4" /> افزودن لینک شبکه اجتماعی
+              </Button>
             </div>
+             {socialLinks.length === 0 && !isLoadingData && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                هیچ لینک شبکه اجتماعی تعریف نشده است.
+              </p>
+            )}
           </AccordionContent>
         </AccordionItem>
+        {/* Add other AccordionItems for more settings groups here */}
       </Accordion>
     </>
   );

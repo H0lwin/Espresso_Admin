@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,51 +19,60 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Edit, Trash2, Search, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react"
-import { format, addDays } from "date-fns";
+import { format, addDays, isValid } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
 import { faIR } from "date-fns/locale"; 
-
-// Removed metadata export:
-// export const metadata: Metadata = {
-//   title: 'کدهای تخفیف - پنل مدیریت اسپرسو اِج',
-// };
+import { getCookie } from "@/lib/utils";
 
 type DiscountType = "Percentage" | "Fixed Amount";
-type DiscountStatus = "Active" | "Inactive" | "Expired";
+type DiscountStatus = "Active" | "Inactive" | "Expired"; // From frontend logic
+type ApiDiscountType = "percentage" | "fixed_amount"; // From API
 
 interface DiscountCode {
-  id: string;
+  id: string | number;
   code: string;
-  type: DiscountType;
+  type: ApiDiscountType; // Store API representation
   value: number;
-  startDate: Date;
-  endDate?: Date;
-  status: DiscountStatus;
-  usageLimit?: number;
-  timesUsed?: number;
+  start_date: string; // ISO string from API
+  end_date?: string | null; // ISO string from API
+  is_active: boolean; // From API
+  usage_limit?: number | null;
+  times_used?: number;
 }
 
-const mockDiscounts: DiscountCode[] = [
-  { id: "disc001", code: "WELCOME10", type: "Percentage", value: 10, startDate: new Date(2023, 0, 1), endDate: new Date(2024, 11, 31), status: "Active", usageLimit: 1000, timesUsed: 150 },
-  { id: "disc002", code: "SUMMER5OFF", type: "Fixed Amount", value: 50000, startDate: new Date(2023, 5, 1), endDate: new Date(2023, 7, 31), status: "Expired", usageLimit: 500, timesUsed: 480 },
-  { id: "disc003", code: "HOLIDAYSPECIAL", type: "Percentage", value: 20, startDate: new Date(2023, 10, 15), status: "Inactive", usageLimit: 200, timesUsed: 0 },
-];
-
-const discountTypeTranslations: Record<DiscountType, string> = {
-  Percentage: "درصدی",
-  "Fixed Amount": "مبلغ ثابت",
+const discountTypeDisplayMap: Record<ApiDiscountType, string> = {
+  percentage: "درصدی",
+  fixed_amount: "مبلغ ثابت",
 };
+
+// Mapping for form select and submission
+const formDiscountTypeMap: Record<DiscountType, ApiDiscountType> = {
+  Percentage: "percentage",
+  "Fixed Amount": "fixed_amount",
+};
+const apiDiscountTypeToForm: Record<ApiDiscountType, DiscountType> = {
+  percentage: "Percentage",
+  fixed_amount: "Fixed Amount",
+};
+
+
+const getDiscountStatus = (discount: DiscountCode): DiscountStatus => {
+  if (!discount.is_active) return "Inactive";
+  if (discount.end_date && new Date(discount.end_date) < new Date()) return "Expired";
+  return "Active";
+};
+
 const discountStatusTranslations: Record<DiscountStatus, string> = {
   Active: "فعال",
   Inactive: "غیرفعال",
@@ -74,30 +82,59 @@ const discountStatusTranslations: Record<DiscountStatus, string> = {
 
 export default function DiscountCodesPage() {
   const { toast } = useToast();
-  const [discounts, setDiscounts] = React.useState<DiscountCode[]>(mockDiscounts);
+  const [discounts, setDiscounts] = React.useState<DiscountCode[]>([]);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingDiscount, setEditingDiscount] = React.useState<DiscountCode | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   const [code, setCode] = React.useState("");
-  const [type, setType] = React.useState<DiscountType>("Percentage");
+  const [formType, setFormType] = React.useState<DiscountType>("Percentage");
   const [value, setValue] = React.useState("");
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({ from: new Date(), to: addDays(new Date(), 30) });
-  const [isActive, setIsActive] = React.useState(true);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({ 
+    from: new Date(), 
+    to: addDays(new Date(), 30) 
+  });
+  const [formIsActive, setFormIsActive] = React.useState(true);
   const [usageLimit, setUsageLimit] = React.useState("");
 
-  const filteredDiscounts = discounts.filter(discount =>
-    discount.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchDiscounts = async () => {
+      setIsLoadingData(true);
+      let url = "/api/v1/discounts/"; // Replace with your actual endpoint
+      if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+      }
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("خطا در دریافت لیست کدهای تخفیف");
+        }
+        const data = await response.json();
+        setDiscounts(data.results || []); // Assuming DRF pagination
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری لیست کدهای تخفیف وجود ندارد.",
+          variant: "destructive",
+        });
+        setDiscounts([]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchDiscounts();
+  }, [searchTerm, toast]);
+
 
   const handleAddNewDiscount = () => {
     setEditingDiscount(null);
     setCode("");
-    setType("Percentage");
+    setFormType("Percentage");
     setValue("");
     setDateRange({ from: new Date(), to: addDays(new Date(), 30) });
-    setIsActive(true);
+    setFormIsActive(true);
     setUsageLimit("");
     setIsFormOpen(true);
   };
@@ -105,58 +142,107 @@ export default function DiscountCodesPage() {
   const handleEditDiscount = (discount: DiscountCode) => {
     setEditingDiscount(discount);
     setCode(discount.code);
-    setType(discount.type);
+    setFormType(apiDiscountTypeToForm[discount.type]);
     setValue(discount.value.toString());
-    setDateRange({ from: discount.startDate, to: discount.endDate });
-    setIsActive(discount.status === "Active");
-    setUsageLimit(discount.usageLimit?.toString() || "");
+    setDateRange({ 
+      from: discount.start_date ? new Date(discount.start_date) : undefined, 
+      to: discount.end_date ? new Date(discount.end_date) : undefined 
+    });
+    setFormIsActive(discount.is_active);
+    setUsageLimit(discount.usage_limit?.toString() || "");
     setIsFormOpen(true);
   };
 
-  const handleDeleteDiscount = (discountId: string) => {
-    if (window.confirm("آیا از حذف این کد تخفیف مطمئن هستید؟")) {
-      setDiscounts(prev => prev.filter(d => d.id !== discountId));
+  const handleDeleteDiscount = async (discountId: string | number) => {
+    if (!window.confirm("آیا از حذف این کد تخفیف مطمئن هستید؟")) return;
+
+    const originalDiscounts = [...discounts];
+    setDiscounts(prev => prev.filter(d => d.id !== discountId));
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(`/api/v1/discounts/${discountId}/`, { // Replace with your actual endpoint
+        method: "DELETE",
+         headers: {
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete discount");
+      }
       toast({
         title: "کد تخفیف حذف شد",
         description: "کد تخفیف مورد نظر حذف گردید.",
+      });
+    } catch (error) {
+      setDiscounts(originalDiscounts);
+      toast({
+        title: "خطا در حذف",
+        description: "امکان حذف کد تخفیف وجود نداشت.",
+        variant: "destructive",
       });
     }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsSubmitting(true);
 
-    const newDiscountData: Omit<DiscountCode, 'id' | 'status' | 'timesUsed'> & { id?: string, status?: DiscountStatus, timesUsed?: number } = {
-      code,
-      type,
+    const payload: any = {
+      code: code,
+      type: formDiscountTypeMap[formType],
       value: parseFloat(value) || 0,
-      startDate: dateRange?.from || new Date(),
-      endDate: dateRange?.to,
-      usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
+      start_date: dateRange?.from ? dateRange.from.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      end_date: dateRange?.to ? dateRange.to.toISOString().split('T')[0] : null,
+      is_active: formIsActive,
+      usage_limit: usageLimit ? parseInt(usageLimit) : null,
     };
-
-    let status: DiscountStatus = isActive ? "Active" : "Inactive";
-    if (newDiscountData.endDate && newDiscountData.endDate < new Date() && isActive) {
-      status = "Expired";
-    }
     
-    if (editingDiscount) {
-      setDiscounts(prev => prev.map(d => d.id === editingDiscount.id ? { ...editingDiscount, ...newDiscountData, status } : d));
-      toast({
-        title: "تخفیف به‌روزرسانی شد",
-        description: `کد تخفیف ${code} با موفقیت به‌روزرسانی شد.`,
+    const apiEndpoint = editingDiscount 
+      ? `/api/v1/discounts/${editingDiscount.id}/` // Replace with your actual endpoint
+      : "/api/v1/discounts/";                 // Replace with your actual endpoint
+    const method = editingDiscount ? "PATCH" : "POST";
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(apiEndpoint, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(payload),
       });
-    } else {
-      setDiscounts(prev => [...prev, { ...newDiscountData, id: `disc${Date.now()}`, status, timesUsed: 0 } as DiscountCode]);
+
+      if (!response.ok) {
+         const errorData = await response.json().catch(() => ({detail: "خطا در پردازش درخواست"}));
+        throw new Error(errorData.detail || `Failed to ${editingDiscount ? 'update' : 'create'} discount`);
+      }
+      const savedDiscount = await response.json();
+
+      if (editingDiscount) {
+        setDiscounts(prev => prev.map(d => d.id === savedDiscount.id ? savedDiscount : d));
+        toast({
+          title: "تخفیف به‌روزرسانی شد",
+          description: `کد تخفیف ${code} با موفقیت به‌روزرسانی شد.`,
+        });
+      } else {
+        setDiscounts(prev => [savedDiscount, ...prev]);
+        toast({
+          title: "تخفیف ایجاد شد",
+          description: `کد تخفیف ${code} با موفقیت ایجاد شد.`,
+        });
+      }
+      setIsFormOpen(false);
+    } catch (error: any) {
       toast({
-        title: "تخفیف ایجاد شد",
-        description: `کد تخفیف ${code} با موفقیت ایجاد شد.`,
+        title: `خطا در ${editingDiscount ? 'به‌روزرسانی' : 'ایجاد'} کد تخفیف`,
+        description: error.message || "لطفا اطلاعات وارد شده را بررسی کنید.",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsLoading(false);
-    setIsFormOpen(false);
   };
   
   const getRowActions = (discount: DiscountCode): ActionItem[] => [
@@ -178,7 +264,7 @@ export default function DiscountCodesPage() {
         title="کدهای تخفیف"
         description="کدهای تخفیف را برای مشتریان خود ایجاد و مدیریت کنید."
         actions={
-          <Button onClick={handleAddNewDiscount} disabled={isLoading}>
+          <Button onClick={handleAddNewDiscount} disabled={isSubmitting || isLoadingData}>
             <PlusCircle className="ms-2 h-4 w-4" /> ایجاد کد تخفیف
           </Button>
         }
@@ -192,11 +278,16 @@ export default function DiscountCodesPage() {
             className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            disabled={isLoading}
+            disabled={isLoadingData}
           />
         </div>
       </div>
-
+      {isLoadingData ? (
+         <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ms-3 text-muted-foreground">در حال بارگذاری کدهای تخفیف...</p>
+        </div>
+      ) : (
       <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -211,64 +302,73 @@ export default function DiscountCodesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredDiscounts.map((discount) => (
+            {discounts.length === 0 && !isLoadingData && (
+               <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  کد تخفیفی یافت نشد.
+                </TableCell>
+              </TableRow>
+            )}
+            {discounts.map((discount) => {
+              const displayStatus = getDiscountStatus(discount);
+              return (
               <TableRow key={discount.id}>
                 <TableCell className="font-medium">{discount.code}</TableCell>
-                <TableCell>{discountTypeTranslations[discount.type]}</TableCell>
-                <TableCell>{discount.type === "Percentage" ? `${discount.value}%` : `${discount.value.toLocaleString('fa-IR')} تومان`}</TableCell>
+                <TableCell>{discountTypeDisplayMap[discount.type]}</TableCell>
+                <TableCell>{discount.type === "percentage" ? `${discount.value}%` : `${discount.value.toLocaleString('fa-IR')} تومان`}</TableCell>
                 <TableCell>
-                  {format(discount.startDate, "yyyy/MM/dd", { locale: faIR })} - {discount.endDate ? format(discount.endDate, "yyyy/MM/dd", { locale: faIR }) : "بدون انقضا"}
+                  {format(new Date(discount.start_date), "yyyy/MM/dd", { locale: faIR })} - {discount.end_date ? format(new Date(discount.end_date), "yyyy/MM/dd", { locale: faIR }) : "بدون انقضا"}
                 </TableCell>
-                <TableCell><Badge variant={getStatusBadgeVariant(discount.status)}>{discountStatusTranslations[discount.status]}</Badge></TableCell>
-                <TableCell>{discount.timesUsed || 0} / {discount.usageLimit || "∞"}</TableCell>
+                <TableCell><Badge variant={getStatusBadgeVariant(displayStatus)}>{discountStatusTranslations[displayStatus]}</Badge></TableCell>
+                <TableCell>{discount.times_used || 0} / {discount.usage_limit || "∞"}</TableCell>
                 <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(discount)} />
                 </TableCell>
               </TableRow>
-            ))}
+             );
+            })}
           </TableBody>
         </Table>
       </div>
-      {filteredDiscounts.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-            هیچ کد تخفیفی یافت نشد.
-        </div>
       )}
 
-      <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
+      <Dialog open={isFormOpen} onOpenChange={(open) => !isSubmitting && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-right">
             <DialogTitle>{editingDiscount ? "ویرایش کد تخفیف" : "ایجاد کد تخفیف جدید"}</DialogTitle>
+            <DialogDescription>
+              {editingDiscount ? "جزئیات این کد تخفیف را به‌روزرسانی کنید." : "یک کد تخفیف جدید برای مشتریان خود تعریف کنید."}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
             <div>
               <Label htmlFor="code">کد تخفیف</Label>
-              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلا SAVE10" required disabled={isLoading} />
+              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلا SAVE10" required disabled={isSubmitting} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="type">نوع</Label>
-                <Select value={type} onValueChange={(v) => setType(v as DiscountType)} disabled={isLoading}>
-                  <SelectTrigger id="type"><SelectValue /></SelectTrigger>
+                <Label htmlFor="formType">نوع</Label>
+                <Select value={formType} onValueChange={(v) => setFormType(v as DiscountType)} disabled={isSubmitting}>
+                  <SelectTrigger id="formType"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(discountTypeTranslations).map(([key, value]) => (
-                      <SelectItem key={key} value={key}>{value}</SelectItem>
+                    {Object.entries(discountTypeDisplayMap).map(([apiKey, displayValue]) => (
+                      <SelectItem key={apiKey} value={apiDiscountTypeToForm[apiKey as ApiDiscountType]}>{displayValue}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="value">مقدار</Label>
-                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "Percentage" ? "10" : "50000"} step={type === "Percentage" ? "1" : "1000"} required disabled={isLoading} />
+                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={formType === "Percentage" ? "10" : "50000"} step={formType === "Percentage" ? "1" : "1000"} required disabled={isSubmitting} />
               </div>
             </div>
             <div>
               <Label htmlFor="dateRange">بازه تاریخی</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button id="dateRange" variant="outline" className="w-full justify-start text-right font-normal" disabled={isLoading}>
-                     {dateRange?.from ? (
-                      dateRange.to ? (
+                  <Button id="dateRange" variant="outline" className="w-full justify-start text-right font-normal" disabled={isSubmitting}>
+                     {dateRange?.from && isValid(dateRange.from) ? (
+                      dateRange.to && isValid(dateRange.to) ? (
                         <>
                           {format(dateRange.from, "PPP", { locale: faIR })} - {format(dateRange.to, "PPP", { locale: faIR })}
                         </>
@@ -282,24 +382,24 @@ export default function DiscountCodesPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} disabled={isLoading} locale={faIR} dir="rtl" />
+                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} disabled={isSubmitting} locale={faIR} dir="rtl" />
                 </PopoverContent>
               </Popover>
             </div>
              <div>
               <Label htmlFor="usageLimit">محدودیت استفاده (اختیاری)</Label>
-              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="مثلا ۱۰۰ (خالی برای نامحدود)" disabled={isLoading} />
+              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="مثلا ۱۰۰ (خالی برای نامحدود)" disabled={isSubmitting} />
             </div>
             <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={isLoading} />
-              <Label htmlFor="isActive">فعال</Label>
+              <Switch id="formIsActive" checked={formIsActive} onCheckedChange={setFormIsActive} disabled={isSubmitting} />
+              <Label htmlFor="formIsActive">فعال</Label>
             </div>
             <DialogFooter className="sm:justify-start">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingDiscount ? "ذخیره تغییرات" : "ایجاد کد"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -10,57 +10,97 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Save, FileText, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
-const initialPrivacyPolicyContent = `
-# Privacy Policy for Espresso Edge
-
-Last Updated: ${new Date().toLocaleDateString()}
-
-## 1. Introduction
-Welcome to Espresso Edge. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy notice, or our practices with regards to your personal information, please contact us at privacy@espressoedge.com.
-
-## 2. Information We Collect
-We collect personal information that you voluntarily provide to us when you register on the Espresso Edge, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Espresso Edge or otherwise when you contact us.
-
-The personal information that we collect depends on the context of your interactions with us and the Espresso Edge, the choices you make and the products and features you use. The personal information we collect may include the following:
-- Name and Contact Data.
-- Credentials.
-- Payment Data.
-
-## 3. How We Use Your Information
-We use personal information collected via our Espresso Edge for a variety of business purposes described below. 
-- To facilitate account creation and logon process.
-- To post testimonials.
-- Request feedback.
-- To enable user-to-user communications.
-- To manage user accounts. 
-- To send administrative information to you. 
-- To protect our Services. 
-- To enforce our terms, conditions and policies for business purposes, to comply with legal and regulatory requirements or in connection with our contract.
-
-(More sections as needed...)
-`;
-
+interface PrivacyPageData {
+  title: string;
+  content: string;
+  last_updated: string; // ISO date string
+}
 
 export default function CmsPrivacyPage() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
-  const [pageTitle, setPageTitle] = React.useState("سیاست حفظ حریم خصوصی");
-  const [content, setContent] = React.useState(initialPrivacyPolicyContent); // محتوای واقعی باید ترجمه شود
+  const [pageTitle, setPageTitle] = React.useState("");
+  const [content, setContent] = React.useState("");
   const [lastUpdated, setLastUpdated] = React.useState(new Date().toISOString().split('T')[0]);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        const response = await fetch("/api/v1/cms/privacy-policy/"); // Replace with your actual endpoint
+        if (!response.ok) throw new Error("Failed to fetch Privacy Policy data");
+        const data: PrivacyPageData = await response.json();
+        setPageTitle(data.title || "سیاست حفظ حریم خصوصی");
+        setContent(data.content || "محتوای پیش‌فرض سیاست حفظ حریم خصوصی..."); // Provide a translated default if API returns empty
+        setLastUpdated(data.last_updated ? data.last_updated.split('T')[0] : new Date().toISOString().split('T')[0]);
+      } catch (error) {
+        toast({
+          title: "خطا در بارگذاری اطلاعات",
+          description: "امکان دریافت اطلاعات صفحه سیاست حفظ حریم خصوصی وجود ندارد.",
+          variant: "destructive",
+        });
+        // Set some default translated fallbacks
+        setPageTitle("سیاست حفظ حریم خصوصی");
+        setContent("محتوای پیش‌فرض سیاست حفظ حریم خصوصی...");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchData();
+  }, [toast]);
 
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("ذخیره سیاست حفظ حریم خصوصی:", { pageTitle, content, lastUpdated });
-    toast({
-      title: "سیاست حفظ حریم خصوصی ذخیره شد",
-      description: "محتوای صفحه سیاست حفظ حریم خصوصی با موفقیت به‌روزرسانی شد.",
-    });
-    setIsSaving(false);
+    const payload: PrivacyPageData = {
+      title: pageTitle,
+      content: content,
+      last_updated: lastUpdated,
+    };
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch("/api/v1/cms/privacy-policy/", { // Replace with your actual endpoint
+        method: "PATCH", // Or PUT/POST
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({detail: "خطا در ذخیره اطلاعات"}));
+        throw new Error(errorData.detail || "Failed to save Privacy Policy");
+      }
+      
+      toast({
+        title: "سیاست حفظ حریم خصوصی ذخیره شد",
+        description: "محتوای صفحه سیاست حفظ حریم خصوصی با موفقیت به‌روزرسانی شد.",
+      });
+    } catch (error: any) {
+       toast({
+        title: "خطا در ذخیره‌سازی",
+        description: error.message || "امکان ذخیره سیاست حفظ حریم خصوصی وجود نداشت.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="ms-4 text-lg">در حال بارگذاری سیاست حفظ حریم خصوصی...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -68,7 +108,7 @@ export default function CmsPrivacyPage() {
         title="CMS: سیاست حفظ حریم خصوصی"
         description="محتوای صفحه سیاست حفظ حریم خصوصی خود را مدیریت کنید."
         actions={
-          <Button onClick={handleSaveChanges} disabled={isSaving}>
+          <Button onClick={handleSaveChanges} disabled={isSaving || isLoadingData}>
             {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
             {isSaving ? "در حال ذخیره..." : "ذخیره تغییرات"}
           </Button>
@@ -77,9 +117,9 @@ export default function CmsPrivacyPage() {
 
       <Card>
         <CardHeader className="text-right">
-          <CardTitle className="flex items-center"><FileText className="ml-2 h-5 w-5" /> ویرایشگر محتوا</CardTitle>
+          <CardTitle className="flex items-center justify-end"><FileText className="ms-2 h-5 w-5" /> ویرایشگر محتوا</CardTitle>
           <CardDescription>
-            از ویرایشگر زیر برای به‌روزرسانی سیاست حفظ حریم خصوصی استفاده کنید. این یک ویرایشگر متن ساده است؛ برای متن غنی، یک کتابخانه مانند TipTap یا Quill را ادغام کنید.
+            از ویرایشگر زیر برای به‌روزرسانی سیاست حفظ حریم خصوصی استفاده کنید. (محتوای حقوقی باید به دقت ترجمه شود)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -104,7 +144,7 @@ export default function CmsPrivacyPage() {
               className="font-mono text-sm"
               placeholder="محتوای سیاست حفظ حریم خصوصی خود را اینجا وارد کنید..."
               disabled={isSaving}
-              dir="ltr" // Legal text might be LTR even in RTL UI
+              dir="ltr" 
             />
           </div>
         </CardContent>
@@ -112,5 +152,3 @@ export default function CmsPrivacyPage() {
     </>
   );
 }
-
-    

@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,59 +45,33 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-
-// Removed metadata export:
-// export const metadata: Metadata = {
-//   title: 'مدیریت سفارشات - پنل مدیریت اسپرسو اِج',
-// };
+import { getCookie } from "@/lib/utils";
 
 type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 type PaymentStatus = "Paid" | "Unpaid" | "Refunded";
 
 interface OrderItem {
-  id: string;
+  id: string | number;
   name: string;
   quantity: number;
   price: number;
   image: string;
 }
+interface OrderCustomer {
+  name: string;
+  email: string;
+  avatar?: string; // API might send full URL or just initials
+  avatar_initials?: string; // Or just initials
+}
 interface Order {
-  id: string;
-  customer: { name: string; email: string; avatar: string };
-  date: string;
+  id: string | number;
+  customer: OrderCustomer;
+  date: string; // Should be ISO string from API
   status: OrderStatus;
   total: number;
-  paymentStatus: PaymentStatus;
+  payment_status: PaymentStatus; // Django often uses snake_case
   items: OrderItem[];
 }
-
-const mockOrders: Order[] = [
-  {
-    id: "سف001", 
-    customer: { name: "آلیس نادری", email: "alice@example.com", avatar: "آن" },
-    date: "2023-10-26",
-    status: "Delivered", 
-    total: 75.50,
-    paymentStatus: "Paid", 
-    items: [
-      { id: "item01", name: "قهوه اسپرسو (۱ کیلوگرم)", quantity: 1, price: 25.00, image: "https://placehold.co/100x100.png" },
-      { id: "item02", name: "ماگ اسپرسو اج", quantity: 2, price: 15.00, image: "https://placehold.co/100x100.png" },
-      { id: "item03", name: "کروسان مخصوص", quantity: 3, price: 6.8333, image: "https://placehold.co/100x100.png" },
-    ],
-  },
-  {
-    id: "سف002", 
-    customer: { name: "باب احمدی", email: "bob@example.com", avatar: "با" },
-    date: "2023-10-25",
-    status: "Processing", 
-    total: 42.00,
-    paymentStatus: "Paid", 
-    items: [
-      { id: "item04", name: "عصاره کلد برو", quantity: 1, price: 18.00, image: "https://placehold.co/100x100.png" },
-      { id: "item05", name: "لیوان مسافرتی", quantity: 1, price: 24.00, image: "https://placehold.co/100x100.png" },
-    ],
-  },
-];
 
 const orderStatusTranslations: Record<OrderStatus, string> = {
   Pending: "در انتظار",
@@ -113,7 +86,6 @@ const paymentStatusTranslations: Record<PaymentStatus, string> = {
   Unpaid: "پرداخت نشده",
   Refunded: "مسترد شده",
 };
-
 
 const getStatusBadgeVariant = (status: OrderStatus) => {
   switch (status) {
@@ -135,29 +107,52 @@ const getPaymentBadgeVariant = (status: PaymentStatus) => {
   }
 };
 
-
 export default function OrdersPage() {
   const { toast } = useToast();
-  const [orders, setOrders] = React.useState<Order[]>(mockOrders);
+  const [orders, setOrders] = React.useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [isNewOrderFormOpen, setIsNewOrderFormOpen] = React.useState(false);
   const [isSubmittingNewOrder, setIsSubmittingNewOrder] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const [newOrderCustomerName, setNewOrderCustomerName] = React.useState("");
   const [newOrderCustomerEmail, setNewOrderCustomerEmail] = React.useState("");
-  const [newOrderItems, setNewOrderItems] = React.useState("");
+  const [newOrderItemsText, setNewOrderItemsText] = React.useState(""); // For simplified text input
   const [newOrderTotal, setNewOrderTotal] = React.useState("");
 
+  React.useEffect(() => {
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      let url = "/api/v1/orders/"; // Replace with your actual endpoint
+      const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      
+      const queryString = params.toString();
+      if (queryString) url += `?${queryString}`;
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.customer.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("خطا در دریافت لیست سفارشات");
+        }
+        const data = await response.json();
+        setOrders(data.results || []); // Assuming Django Rest Framework pagination
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری لیست سفارشات وجود ندارد.",
+          variant: "destructive",
+        });
+        setOrders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOrders();
+  }, [searchTerm, statusFilter, toast]);
 
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -166,7 +161,7 @@ export default function OrdersPage() {
   const handleOpenNewOrderForm = () => {
     setNewOrderCustomerName("");
     setNewOrderCustomerEmail("");
-    setNewOrderItems("");
+    setNewOrderItemsText("");
     setNewOrderTotal("");
     setIsNewOrderFormOpen(true);
   };
@@ -174,29 +169,98 @@ export default function OrdersPage() {
   const handleAddNewOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingNewOrder(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const newOrder: Order = {
-      id: `سف${Date.now().toString().slice(-4)}`,
+    // Basic parsing for simplified item entry, in a real scenario this would be more robust
+    const items = newOrderItemsText.split('\n').map(line => {
+      const parts = line.split(',');
+      return {
+        name: parts[0]?.trim() || "آیتم سفارشی",
+        quantity: parseInt(parts[1]?.trim()) || 1,
+        price: parseFloat(parts[2]?.trim()) || parseFloat(newOrderTotal) || 0,
+        image: "https://placehold.co/100x100.png" // Placeholder
+      };
+    }).filter(item => item.name);
+
+    const newOrderPayload = {
       customer: { 
         name: newOrderCustomerName, 
         email: newOrderCustomerEmail, 
-        avatar: newOrderCustomerName.split(" ").map(n => n[0]).join("").toUpperCase() || "XX" 
       },
-      date: new Date().toISOString().split("T")[0],
-      status: "Pending",
+      status: "Pending", // Default status
       total: parseFloat(newOrderTotal) || 0,
-      paymentStatus: "Unpaid",
-      items: [{ id: "item-custom", name: newOrderItems.split('\n')[0] || "آیتم سفارشی", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }],
+      payment_status: "Unpaid", // Default payment status
+      items: items.length > 0 ? items : [{ id: "item-custom", name: "آیتم سفارشی", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }],
     };
-    setOrders(prevOrders => [newOrder, ...prevOrders]);
-    
-    toast({
-      title: "سفارش ایجاد شد",
-      description: `سفارش جدید ${newOrder.id} با موفقیت ایجاد شد.`,
-    });
-    setIsSubmittingNewOrder(false);
-    setIsNewOrderFormOpen(false);
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch("/api/v1/orders/", { // Replace with your actual endpoint
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify(newOrderPayload),
+      });
+
+      if (response.ok) {
+        const createdOrder = await response.json();
+        setOrders(prevOrders => [createdOrder, ...prevOrders]);
+        toast({
+          title: "سفارش ایجاد شد",
+          description: `سفارش جدید ${createdOrder.id} با موفقیت ایجاد شد.`,
+        });
+        setIsNewOrderFormOpen(false);
+      } else {
+        const errorData = await response.json().catch(() => ({detail: "خطا در ایجاد سفارش"}));
+        toast({
+          title: "خطا در ایجاد سفارش",
+          description: errorData.detail || "لطفا اطلاعات وارد شده را بررسی کنید.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطا در ارتباط",
+        description: "مشکلی در اتصال به سرور رخ داده است.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingNewOrder(false);
+    }
+  };
+  
+  // Placeholder for updateStatus - this would call your API
+  const handleChangeOrderStatus = async (orderId: string | number, newStatus: OrderStatus) => {
+    // Find the order to update its UI optimistically or refetch
+    const originalOrders = [...orders];
+    setOrders(prevOrders => 
+      prevOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o)
+    );
+
+    try {
+      const csrfToken = getCookie("csrftoken");
+      const response = await fetch(`/api/v1/orders/${orderId}/change-status/`, { // Replace with your actual endpoint
+        method: 'PATCH', // or PUT
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
+      }
+      const updatedOrder = await response.json();
+      setOrders(prevOrders => 
+        prevOrders.map(o => o.id === orderId ? updatedOrder : o)
+      );
+      toast({ title: "وضعیت سفارش به‌روز شد", description: `وضعیت سفارش ${orderId} به ${orderStatusTranslations[newStatus]} تغییر کرد.` });
+    } catch (error) {
+      setOrders(originalOrders); // Revert optimistic update
+      toast({ title: "خطا", description: "عدم موفقیت در به‌روزرسانی وضعیت سفارش.", variant: "destructive" });
+    }
   };
 
 
@@ -210,7 +274,7 @@ export default function OrdersPage() {
             <Button variant="outline">
               <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
             </Button>
-            <Button onClick={handleOpenNewOrderForm}>
+            <Button onClick={handleOpenNewOrderForm} disabled={isLoading}>
               <PlusCircle className="ms-2 h-4 w-4" /> افزودن سفارش جدید
             </Button>
           </div>
@@ -241,6 +305,12 @@ export default function OrdersPage() {
         </Select>
       </div>
 
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ms-3 text-muted-foreground">در حال بارگذاری سفارشات...</p>
+        </div>
+      ) : (
       <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -255,14 +325,21 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOrders.map((order) => (
+            {orders.length === 0 && !isLoading && (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  سفارشی یافت نشد.
+                </TableCell>
+              </TableRow>
+            )}
+            {orders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.id}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://placehold.co/40x40.png?text=${order.customer.avatar}`} data-ai-hint="customer avatar" />
-                      <AvatarFallback>{order.customer.avatar}</AvatarFallback>
+                      <AvatarImage src={order.customer.avatar || `https://placehold.co/40x40.png?text=${order.customer.avatar_initials || order.customer.name.charAt(0)}`} data-ai-hint="customer avatar" />
+                      <AvatarFallback>{order.customer.avatar_initials || order.customer.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div>{order.customer.name}</div>
@@ -275,11 +352,11 @@ export default function OrdersPage() {
                   <Badge variant={getStatusBadgeVariant(order.status)}>{orderStatusTranslations[order.status]}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>{paymentStatusTranslations[order.paymentStatus]}</Badge>
+                  <Badge variant={getPaymentBadgeVariant(order.payment_status)}>{paymentStatusTranslations[order.payment_status]}</Badge>
                 </TableCell>
-                <TableCell className="text-left">{order.total.toLocaleString('fa-IR', { style: 'currency', currency: 'IRR' }).replace("ریال", "تومان")}</TableCell>
+                <TableCell className="text-left">{order.total.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell className="text-left">
-                  <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)}>
+                   <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)}>
                     <Eye className="h-4 w-4" />
                      <span className="sr-only">مشاهده جزئیات</span>
                   </Button>
@@ -295,21 +372,18 @@ export default function OrdersPage() {
                       <DropdownMenuItem onClick={() => handleViewDetails(order)} className="flex items-center">
                         <Eye className="ms-2 h-4 w-4" /> مشاهده جزئیات
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
+                      {/* <DropdownMenuItem className="flex items-center">
                         <Edit className="ms-2 h-4 w-4" /> ویرایش سفارش
-                      </DropdownMenuItem>
+                      </DropdownMenuItem> */}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="flex items-center">
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Shipped")} className="flex items-center" disabled={order.status === "Shipped" || order.status === "Delivered" || order.status === "Cancelled"}>
                         <Truck className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان ارسال شده
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Delivered")} className="flex items-center" disabled={order.status === "Delivered" || order.status === "Cancelled"}>
                         <CheckCircle className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان تحویل شده
                       </DropdownMenuItem>
-                       <DropdownMenuItem className="flex items-center">
-                        <RefreshCcw className="ms-2 h-4 w-4" /> تغییر وضعیت
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive flex items-center">
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Cancelled")} className="text-destructive flex items-center" disabled={order.status === "Cancelled" || order.status === "Delivered"}>
                         <XCircle className="ms-2 h-4 w-4" /> لغو سفارش
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -320,10 +394,6 @@ export default function OrdersPage() {
           </TableBody>
         </Table>
       </div>
-      {filteredOrders.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-            سفارشی با معیارهای شما یافت نشد.
-        </div>
       )}
 
       <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
@@ -351,7 +421,7 @@ export default function OrdersPage() {
                     {selectedOrder.items.map(item => (
                       <li key={item.id} className="flex items-center gap-4">
                         <img 
-                          src={item.image} 
+                          src={item.image || "https://placehold.co/64x64.png"} 
                           alt={item.name} 
                           className="h-16 w-16 rounded object-cover"
                           data-ai-hint="product item" 
@@ -369,6 +439,7 @@ export default function OrdersPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">جزئیات قیمت</h3>
                   <div className="space-y-1 text-sm">
+                    {/* Assuming API provides subtotal, shipping, tax if needed, or frontend calculates */}
                     <div className="flex justify-between"><span>جمع فرعی:</span> <span>{selectedOrder.total.toLocaleString('fa-IR')} تومان</span></div>
                     <div className="flex justify-between"><span>هزینه ارسال:</span> <span>۰ تومان</span></div>
                     <div className="flex justify-between"><span>مالیات:</span> <span>۰ تومان</span></div>
@@ -381,12 +452,12 @@ export default function OrdersPage() {
                   <h3 className="text-lg font-semibold mb-2">وضعیت</h3>
                   <div className="flex items-center gap-4">
                     <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="text-sm px-3 py-1">{orderStatusTranslations[selectedOrder.status]}</Badge>
-                    <Badge variant={getPaymentBadgeVariant(selectedOrder.paymentStatus)} className="text-sm px-3 py-1">{paymentStatusTranslations[selectedOrder.paymentStatus]}</Badge>
+                    <Badge variant={getPaymentBadgeVariant(selectedOrder.payment_status)} className="text-sm px-3 py-1">{paymentStatusTranslations[selectedOrder.payment_status]}</Badge>
                   </div>
                 </div>
               </div>
               <SheetFooter className="p-6 border-t flex-col sm:flex-row sm:justify-start gap-2">
-                <Button>به‌روزرسانی سفارش</Button>
+                {/* <Button>به‌روزرسانی سفارش</Button> */}
                 <Button variant="outline" onClick={() => setSelectedOrder(null)}>بستن</Button>
               </SheetFooter>
             </>
@@ -425,16 +496,15 @@ export default function OrdersPage() {
               />
             </div>
             <div>
-              <Label htmlFor="newOrderItems">آیتم‌ها (نام، تعداد، قیمت در هر خط - ساده شده)</Label>
+              <Label htmlFor="newOrderItemsText">آیتم‌ها (نام،تعداد،قیمت واحد در هر خط، با ویرگول جدا شود)</Label>
               <Textarea 
-                id="newOrderItems" 
-                value={newOrderItems} 
-                onChange={(e) => setNewOrderItems(e.target.value)} 
-                placeholder="مثال: اسپرسو، ۲، ۳۵۰۰۰ تومان\nلاته، ۱، ۴۰۰۰۰ تومان" 
-                rows={4}
+                id="newOrderItemsText" 
+                value={newOrderItemsText} 
+                onChange={(e) => setNewOrderItemsText(e.target.value)} 
+                placeholder="مثال: اسپرسو, ۲, ۳۵۰۰۰\nلاته, ۱, ۴۰۰۰۰" 
+                rows={3}
                 disabled={isSubmittingNewOrder}
               />
-              <p className="text-xs text-muted-foreground mt-1">فعلا لطفا مجموع را دستی محاسبه کنید.</p>
             </div>
             <div>
               <Label htmlFor="newOrderTotal">مجموع سفارش (تومان)</Label>
@@ -443,11 +513,12 @@ export default function OrdersPage() {
                 type="number" 
                 value={newOrderTotal} 
                 onChange={(e) => setNewOrderTotal(e.target.value)} 
-                placeholder="۷۵۰۰۰" 
+                placeholder="مثلا ۷۵۰۰۰" 
                 step="1000" 
                 required 
                 disabled={isSubmittingNewOrder}
               />
+               <p className="text-xs text-muted-foreground mt-1">توجه: برای این فرم ساده شده، مجموع را دستی محاسبه و وارد کنید.</p>
             </div>
             <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isSubmittingNewOrder}>

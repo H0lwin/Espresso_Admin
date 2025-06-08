@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,59 +14,107 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { FileDown, Search, Trash2 } from "lucide-react";
-
-// Removed metadata export:
-// export const metadata: Metadata = {
-//   title: 'مشترکین خبرنامه - پنل مدیریت اسپرسو اِج',
-// };
+import { FileDown, Search, Trash2, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getCookie } from "@/lib/utils";
 
 interface Subscriber {
-  id: string;
+  id: string | number;
   email: string;
-  subscriptionDate: string;
-  source: string;
+  subscription_date: string; // snake_case from API
+  source?: string; // Optional
 }
 
-const mockSubscribers: Subscriber[] = [
-  { id: "sub001", email: "subscriber1@example.com", subscriptionDate: "2023-09-15", source: "فوتر وب‌سایت" },
-  { id: "sub002", email: "coffee.lover@example.net", subscriptionDate: "2023-10-01", source: "انتخاب در پرداخت" },
-  { id: "sub003", email: "testuser@example.org", subscriptionDate: "2023-08-20", source: "فرم پاپ‌آپ" },
-  { id: "sub004", email: "another.email@example.com", subscriptionDate: "2023-10-10", source: "فوتر وب‌سایت" },
-  { id: "sub005", email: "earlybird@example.io", subscriptionDate: "2023-07-01", source: "ثبت‌نام رویداد" },
-];
-
 export default function NewsletterPage() {
-  const [subscribers, setSubscribers] = React.useState<Subscriber[]>(mockSubscribers);
+  const { toast } = useToast();
+  const [subscribers, setSubscribers] = React.useState<Subscriber[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
+  const [isExporting, setIsExporting] = React.useState(false);
 
-  const filteredSubscribers = subscribers.filter(subscriber =>
-    subscriber.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  React.useEffect(() => {
+    const fetchSubscribers = async () => {
+      setIsLoadingData(true);
+      let url = "/api/v1/newsletter-subscribers/"; // Replace with your actual endpoint
+      if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+      }
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error("خطا در دریافت لیست مشترکین");
+        }
+        const data = await response.json();
+        setSubscribers(data.results || []); // Assuming DRF pagination
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری لیست مشترکین خبرنامه وجود ندارد.",
+          variant: "destructive",
+        });
+        setSubscribers([]);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchSubscribers();
+  }, [searchTerm, toast]);
 
-  const handleExportCsv = () => {
-    const headers = "شناسه,ایمیل,تاریخ اشتراک,منبع\n";
-    const csvContent = filteredSubscribers.map(s =>
-      `${s.id},${s.email},${s.subscriptionDate},${s.source}`
-    ).join("\n");
-    const blob = new Blob(["\uFEFF" + headers + csvContent], { type: 'text/csv;charset=utf-8;' }); 
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "newsletter_subscribers.csv");
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch("/api/v1/newsletter-subscribers/export-csv/"); // Replace with your actual export endpoint
+      if (!response.ok) {
+        throw new Error("خطا در خروجی گرفتن از اطلاعات");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "newsletter_subscribers.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast({title: "موفق", description: "خروجی CSV با موفقیت دانلود شد."});
+    } catch (error) {
+      toast({
+        title: "خطا در خروجی CSV",
+        description: "امکان تولید فایل CSV وجود نداشت. لطفا دوباره تلاش کنید.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
-    alert("خروجی CSV شروع شد (آزمایشی).");
   };
   
-  const handleDeleteSubscriber = (subscriberId: string) => {
-     if (window.confirm("آیا از حذف این مشترک مطمئن هستید؟")) {
-      setSubscribers(prev => prev.filter(s => s.id !== subscriberId));
-    }
+  const handleDeleteSubscriber = async (subscriberId: string | number) => {
+     if (!window.confirm("آیا از حذف این مشترک مطمئن هستید؟")) return;
+
+     const originalSubscribers = [...subscribers];
+     setSubscribers(prev => prev.filter(s => s.id !== subscriberId));
+
+     try {
+        const csrfToken = getCookie("csrftoken");
+        const response = await fetch(`/api/v1/newsletter-subscribers/${subscriberId}/`, { // Replace with your actual endpoint
+            method: 'DELETE',
+            headers: {
+             ...(csrfToken && { "X-CSRFToken": csrfToken }),
+            },
+        });
+        if (!response.ok) {
+            throw new Error("Failed to delete subscriber");
+        }
+        toast({title: "مشترک حذف شد"});
+     } catch (error) {
+        setSubscribers(originalSubscribers);
+        toast({
+            title: "خطا در حذف",
+            description: "امکان حذف مشترک وجود نداشت.",
+            variant: "destructive",
+        });
+     }
   };
 
   const getRowActions = (subscriber: Subscriber): ActionItem[] => [
@@ -80,8 +127,9 @@ export default function NewsletterPage() {
         title="مشترکین خبرنامه"
         description="لیست مشترکین خبرنامه خود را مدیریت و صادر کنید."
         actions={
-          <Button onClick={handleExportCsv}>
-            <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
+          <Button onClick={handleExportCsv} disabled={isExporting || isLoadingData}>
+            {isExporting ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <FileDown className="ms-2 h-4 w-4" />}
+            {isExporting ? "در حال تولید..." : "خروجی CSV"}
           </Button>
         }
       />
@@ -94,10 +142,16 @@ export default function NewsletterPage() {
             className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoadingData}
           />
         </div>
       </div>
-
+      {isLoadingData ? (
+         <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ms-3 text-muted-foreground">در حال بارگذاری مشترکین...</p>
+        </div>
+      ) : (
       <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -109,11 +163,18 @@ export default function NewsletterPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSubscribers.map((subscriber) => (
+            {subscribers.length === 0 && !isLoadingData && (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  هیچ مشترکی یافت نشد.
+                </TableCell>
+              </TableRow>
+            )}
+            {subscribers.map((subscriber) => (
               <TableRow key={subscriber.id}>
                 <TableCell className="font-medium">{subscriber.email}</TableCell>
-                <TableCell>{new Date(subscriber.subscriptionDate).toLocaleDateString('fa-IR')}</TableCell>
-                <TableCell>{subscriber.source}</TableCell>
+                <TableCell>{new Date(subscriber.subscription_date).toLocaleDateString('fa-IR')}</TableCell>
+                <TableCell>{subscriber.source || "-"}</TableCell>
                 <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(subscriber)} />
                 </TableCell>
@@ -122,10 +183,6 @@ export default function NewsletterPage() {
           </TableBody>
         </Table>
       </div>
-      {filteredSubscribers.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-            هیچ مشترکی یافت نشد.
-        </div>
       )}
     </>
   );

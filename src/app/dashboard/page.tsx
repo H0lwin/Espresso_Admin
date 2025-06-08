@@ -17,6 +17,7 @@ import {
   Settings,
   Coffee,
   Package,
+  Loader2,
 } from "lucide-react";
 import {
   Table,
@@ -26,22 +27,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
-const recentActivities = [
-  { id: 1, user: "آلیس اسمیت", avatar: "آا", action: "سفارش جدید #۱۲۳۴۵ را ثبت کرد", time: "۵ دقیقه پیش", type: "order" },
-  { id: 2, user: "باب جانسون", avatar: "ب‌ج", action: "در خبرنامه مشترک شد", time: "۱۵ دقیقه پیش", type: "user" },
-  { id: 3, user: "ادمین", avatar: "اد", action: "آیتم منوی 'اسپرسو بلند' را به‌روزرسانی کرد", time: "۳۰ دقیقه پیش", type: "menu" },
-  { id: 4, user: "کارول وایت", avatar: "ک‌و", action: "یک نقد ۵ ستاره برای 'کلد برو' ثبت کرد", time: "۱ ساعت پیش", type: "review" },
-  { id: 5, user: "دیوید گرین", avatar: "دگ", action: "حساب کاربری جدیدی ایجاد کرد", time: "۲ ساعت پیش", type: "user" },
-];
+interface Activity {
+  id: number | string;
+  user: string;
+  avatar: string;
+  action: string;
+  time: string;
+  type: string;
+}
 
-const topItems = [
-  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷٬۲۰۰٬۰۰۰ ریال" },
-  { id: 2, name: "ماگ اسپرسو اج", category: "کالاها", sales: 85, revenue: "۱۲٬۷۵۰٬۰۰۰ ریال" },
-  { id: 3, name: "کروسان", category: "خوراکی", sales: 250, revenue: "۸٬۷۵۰٬۰۰۰ ریال" },
-  { id: 4, name: "دانه قهوه (۱ کیلوگرم)", category: "کالاها", sales: 60, revenue: "۱۵٬۰۰۰٬۰۰۰ ریال" },
-  { id: 5, name: "آیس لاته", category: "نوشیدنی‌ها", sales: 150, revenue: "۷٬۵۰۰٬۰۰۰ ریال" },
-];
+interface TopItem {
+  id: number | string;
+  name: string;
+  category: string;
+  sales: number;
+  revenue: string; // Assuming revenue is formatted string from API
+}
+
+interface DashboardStats {
+  totalSales: string;
+  totalOrders: string;
+  newUsers: string;
+  subscribers: string;
+  topItemName: string;
+  totalSalesChange: string;
+  totalOrdersChange: string;
+  newUsersChange: string;
+  subscribersChange: string;
+  topItemSales: string;
+}
+
 
 const getIconForActivity = (type: string) => {
   switch (type) {
@@ -54,16 +71,66 @@ const getIconForActivity = (type: string) => {
 };
 
 export default function DashboardPage() {
+  const { toast } = useToast();
+  const [recentActivities, setRecentActivities] = React.useState<Activity[]>([]);
+  const [topItems, setTopItems] = React.useState<TopItem[]>([]);
+  const [stats, setStats] = React.useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [activitiesRes, topItemsRes, statsRes] = await Promise.all([
+          fetch("/api/v1/dashboard/recent-activities/"), // Replace with your actual endpoint
+          fetch("/api/v1/dashboard/top-items/"),      // Replace with your actual endpoint
+          fetch("/api/v1/dashboard/stats/"),           // Replace with your actual endpoint
+        ]);
+
+        if (!activitiesRes.ok || !topItemsRes.ok || !statsRes.ok) {
+          throw new Error("خطا در دریافت اطلاعات داشبورد");
+        }
+
+        const activitiesData = await activitiesRes.json();
+        const topItemsData = await topItemsRes.json();
+        const statsData = await statsRes.json();
+
+        setRecentActivities(activitiesData.results || []);
+        setTopItems(topItemsData.results || []);
+        setStats(statsData);
+
+      } catch (error) {
+        toast({
+          title: "خطا",
+          description: "امکان بارگذاری اطلاعات داشبورد وجود ندارد.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [toast]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        <p className="ms-4 text-lg">در حال بارگذاری اطلاعات داشبورد...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <PageHeader title="نمای کلی داشبورد" description="خوش آمدید ادمین! آخرین وضعیت به شرح زیر است." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        <StatCard title="کل فروش" value="۱۲۳٬۴۵۰٬۰۰۰ ریال" icon={DollarSign} change="۵.۲٪+ از ماه گذشته" changeType="positive" />
-        <StatCard title="کل سفارشات" value="۸۶۷" icon={ShoppingCart} change="۲.۱٪+ از ماه گذشته" changeType="positive" />
-        <StatCard title="کاربران جدید" value="۴۵" icon={Users} change="۱.۵٪- از ماه گذشته" changeType="negative" />
-        <StatCard title="مشترکین" value="۱٬۲۰۴" icon={Mail} change="۱۰۰+ در این هفته" changeType="positive" />
-        <StatCard title="آیتم برتر" value="کارامل ماکیاتو" icon={TrendingUp} change="فروش ۱۲۰ واحد" />
+        <StatCard title="کل فروش" value={stats?.totalSales || "0 ریال"} icon={DollarSign} change={stats?.totalSalesChange} changeType={stats?.totalSalesChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کل سفارشات" value={stats?.totalOrders || "0"} icon={ShoppingCart} change={stats?.totalOrdersChange} changeType={stats?.totalOrdersChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کاربران جدید" value={stats?.newUsers || "0"} icon={Users} change={stats?.newUsersChange} changeType={stats?.newUsersChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="مشترکین" value={stats?.subscribers || "0"} icon={Mail} change={stats?.subscribersChange} changeType="positive" />
+        <StatCard title="آیتم برتر" value={stats?.topItemName || "-"} icon={TrendingUp} change={`فروش ${stats?.topItemSales || "0"} واحد`} />
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -79,23 +146,27 @@ export default function DashboardPage() {
             <CardDescription>آخرین به‌روزرسانی‌ها و اقدامات در سراسر پلتفرم.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-4">
-              {recentActivities.map((activity) => (
-                <li key={activity.id} className="flex items-start space-x-reverse space-x-3">
-                  <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar" />
-                    <AvatarFallback>{activity.avatar}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 text-right">
-                    <p className="text-sm">
-                      <span className="font-medium text-foreground">{activity.user}</span> {activity.action}.
-                    </p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                  {getIconForActivity(activity.type)}
-                </li>
-              ))}
-            </ul>
+            {recentActivities.length > 0 ? (
+              <ul className="space-y-4">
+                {recentActivities.map((activity) => (
+                  <li key={activity.id} className="flex items-start space-x-reverse space-x-3">
+                    <Avatar className="h-10 w-10 border">
+                      <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar" />
+                      <AvatarFallback>{activity.avatar}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 text-right">
+                      <p className="text-sm">
+                        <span className="font-medium text-foreground">{activity.user}</span> {activity.action}.
+                      </p>
+                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    </div>
+                    {getIconForActivity(activity.type)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">فعالیت اخیری یافت نشد.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -105,28 +176,32 @@ export default function DashboardPage() {
             <CardDescription>محبوب‌ترین آیتم‌ها بر اساس فروش یا درآمد.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-right">آیتم</TableHead>
-                    <TableHead className="text-center">فروش</TableHead>
-                    <TableHead className="text-left">درآمد</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topItems.slice(0, 5).map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-right">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-xs text-muted-foreground">{item.category}</div>
-                      </TableCell>
-                      <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
-                      <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
+             <div className="overflow-x-auto">
+              {topItems.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">آیتم</TableHead>
+                      <TableHead className="text-center">فروش</TableHead>
+                      <TableHead className="text-left">درآمد</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {topItems.slice(0, 5).map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-right">
+                          <div className="font-medium">{item.name}</div>
+                          <div className="text-xs text-muted-foreground">{item.category}</div>
+                        </TableCell>
+                        <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
+                        <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                 <p className="text-sm text-muted-foreground text-center py-4">آیتم پرفروشی یافت نشد.</p>
+              )}
             </div>
           </CardContent>
         </Card>
