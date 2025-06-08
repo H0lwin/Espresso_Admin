@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -128,7 +129,7 @@ export function SidebarNav() {
       
       return (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} passHref legacyBehavior>
+          <Link href={item.href}>
             <MenuButtonComponent isActive={isActive} tooltip={item.title}>
               <item.icon className="mr-2 h-4 w-4" />
               <span>{item.title}</span>
