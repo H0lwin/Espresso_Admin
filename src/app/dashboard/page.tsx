@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ const getIconForActivity = (type: string) => {
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const router = useRouter(); // Initialize useRouter
   const [recentActivities, setRecentActivities] = React.useState<Activity[]>([]);
   const [topItems, setTopItems] = React.useState<TopItem[]>([]);
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
@@ -82,29 +84,61 @@ export default function DashboardPage() {
       setIsLoading(true);
       try {
         const [activitiesRes, topItemsRes, statsRes] = await Promise.all([
-          fetch("/api/v1/dashboard/recent-activities/"), // Replace with your actual endpoint
-          fetch("/api/v1/dashboard/top-items/"),      // Replace with your actual endpoint
-          fetch("/api/v1/dashboard/stats/"),           // Replace with your actual endpoint
+          fetch("/api/v1/dashboard/recent-activities/"),
+          fetch("/api/v1/dashboard/top-items/"),
+          fetch("/api/v1/dashboard/stats/"),
         ]);
 
-        if (!activitiesRes.ok || !topItemsRes.ok || !statsRes.ok) {
-          throw new Error("خطا در دریافت اطلاعات داشبورد");
+        let activitiesData, topItemsData, statsData;
+
+        if (activitiesRes.ok) {
+            activitiesData = await activitiesRes.json();
+            setRecentActivities(activitiesData.results || []);
+        } else {
+            console.error("Failed to fetch recent activities:", activitiesRes.statusText);
+            setRecentActivities([]); // Set to empty on error
+            toast({
+              title: "خطا در بارگذاری فعالیت‌های اخیر",
+              description: "امکان دریافت اطلاعات فعالیت‌های اخیر وجود نداشت.",
+              variant: "destructive",
+            });
         }
 
-        const activitiesData = await activitiesRes.json();
-        const topItemsData = await topItemsRes.json();
-        const statsData = await statsRes.json();
+        if (topItemsRes.ok) {
+            topItemsData = await topItemsRes.json();
+            setTopItems(topItemsData.results || []);
+        } else {
+            console.error("Failed to fetch top items:", topItemsRes.statusText);
+            setTopItems([]); // Set to empty on error
+            toast({
+              title: "خطا در بارگذاری آیتم‌های برتر",
+              description: "امکان دریافت اطلاعات آیتم‌های پرفروش وجود نداشت.",
+              variant: "destructive",
+            });
+        }
 
-        setRecentActivities(activitiesData.results || []);
-        setTopItems(topItemsData.results || []);
-        setStats(statsData);
+        if (statsRes.ok) {
+            statsData = await statsRes.json();
+            setStats(statsData);
+        } else {
+            console.error("Failed to fetch dashboard stats:", statsRes.statusText);
+            setStats(null); // Set to null on error
+             toast({
+              title: "خطا در بارگذاری آمار داشبورد",
+              description: "امکان دریافت آمار کلی داشبورد وجود نداشت.",
+              variant: "destructive",
+            });
+        }
 
-      } catch (error) {
+      } catch (error: any) {
         toast({
-          title: "خطا",
-          description: "امکان بارگذاری اطلاعات داشبورد وجود ندارد.",
+          title: "خطا در ارتباط با سرور",
+          description: error.message || "امکان بارگذاری کامل اطلاعات داشبورد وجود ندارد.",
           variant: "destructive",
         });
+        setRecentActivities([]);
+        setTopItems([]);
+        setStats(null);
       } finally {
         setIsLoading(false);
       }
@@ -126,17 +160,17 @@ export default function DashboardPage() {
       <PageHeader title="نمای کلی داشبورد" description="خوش آمدید ادمین! آخرین وضعیت به شرح زیر است." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        <StatCard title="کل فروش" value={stats?.totalSales || "0 ریال"} icon={DollarSign} change={stats?.totalSalesChange} changeType={stats?.totalSalesChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="کل سفارشات" value={stats?.totalOrders || "0"} icon={ShoppingCart} change={stats?.totalOrdersChange} changeType={stats?.totalOrdersChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="کاربران جدید" value={stats?.newUsers || "0"} icon={Users} change={stats?.newUsersChange} changeType={stats?.newUsersChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="مشترکین" value={stats?.subscribers || "0"} icon={Mail} change={stats?.subscribersChange} changeType="positive" />
-        <StatCard title="آیتم برتر" value={stats?.topItemName || "-"} icon={TrendingUp} change={`فروش ${stats?.topItemSales || "0"} واحد`} />
+        <StatCard title="کل فروش" value={stats?.totalSales || "۰ ریال"} icon={DollarSign} change={stats?.totalSalesChange || "۰٪"} changeType={stats?.totalSalesChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کل سفارشات" value={stats?.totalOrders || "۰"} icon={ShoppingCart} change={stats?.totalOrdersChange || "۰٪"} changeType={stats?.totalOrdersChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کاربران جدید" value={stats?.newUsers || "۰"} icon={Users} change={stats?.newUsersChange || "۰٪"} changeType={stats?.newUsersChange?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="مشترکین" value={stats?.subscribers || "۰"} icon={Mail} change={stats?.subscribersChange || "۰"} changeType="positive" />
+        <StatCard title="آیتم برتر" value={stats?.topItemName || "-"} icon={TrendingUp} change={`فروش ${stats?.topItemSales || "۰"} واحد`} />
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        <Button variant="default"><PlusCircle className="ms-2 h-4 w-4" /> سفارش جدید</Button>
-        <Button variant="outline"><Coffee className="ms-2 h-4 w-4" /> افزودن آیتم منو</Button>
-        <Button variant="outline"><Settings className="ms-2 h-4 w-4" /> تنظیمات سایت</Button>
+        <Button variant="default" onClick={() => router.push('/dashboard/orders')}><PlusCircle className="ms-2 h-4 w-4" /> سفارش جدید</Button>
+        <Button variant="outline" onClick={() => router.push('/dashboard/menu')}><Coffee className="ms-2 h-4 w-4" /> افزودن آیتم منو</Button>
+        <Button variant="outline" onClick={() => router.push('/dashboard/settings')}><Settings className="ms-2 h-4 w-4" /> تنظیمات سایت</Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -165,7 +199,9 @@ export default function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">فعالیت اخیری یافت نشد.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">
+                {isLoading ? "در حال بارگذاری فعالیت‌ها..." : "فعالیت اخیری یافت نشد."}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -200,7 +236,9 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               ) : (
-                 <p className="text-sm text-muted-foreground text-center py-4">آیتم پرفروشی یافت نشد.</p>
+                 <p className="text-sm text-muted-foreground text-center py-4">
+                   {isLoading ? "در حال بارگذاری آیتم‌ها..." : "آیتم پرفروشی یافت نشد."}
+                 </p>
               )}
             </div>
           </CardContent>
