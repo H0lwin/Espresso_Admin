@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AdminProfilePage() {
   const { toast } = useToast();
-  const [name, setName] = React.useState("Admin User");
+  const [name, setName] = React.useState("کاربر ادمین");
   const [email, setEmail] = React.useState("admin@espressoedge.com");
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
@@ -38,31 +38,28 @@ export default function AdminProfilePage() {
     e.preventDefault();
     setIsSaving(true);
 
-    // Validation for passwords if fields are filled
     if (newPassword && newPassword !== confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "New passwords do not match. Please try again.",
+        title: "عدم تطابق رمز عبور",
+        description: "رمزهای عبور جدید با هم مطابقت ندارند. لطفا دوباره تلاش کنید.",
         variant: "destructive",
       });
       setIsSaving(false);
       return;
     }
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    console.log("Updating profile:", { name, email, avatarFile: avatarFile?.name });
+    console.log("به‌روزرسانی پروفایل:", { name, email, avatarFile: avatarFile?.name });
     if (newPassword) {
-      console.log("Password change requested."); // Handle securely in a real app
+      console.log("درخواست تغییر رمز عبور.");
     }
     
     toast({
-      title: "Profile Updated",
-      description: "Your profile details have been successfully updated.",
+      title: "پروفایل به‌روزرسانی شد",
+      description: "جزئیات پروفایل شما با موفقیت به‌روزرسانی شد.",
     });
     setIsSaving(false);
-    // Optionally clear password fields
     setNewPassword("");
     setConfirmPassword("");
     setCurrentPassword("");
@@ -71,36 +68,35 @@ export default function AdminProfilePage() {
   return (
     <>
       <PageHeader
-        title="My Profile"
-        description="Manage your personal account details and password."
+        title="پروفایل من"
+        description="جزئیات حساب شخصی و رمز عبور خود را مدیریت کنید."
       />
       <form onSubmit={handleProfileUpdate}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Details Card */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center"><UserCircle2 className="mr-2 h-5 w-5" /> Profile Information</CardTitle>
-              <CardDescription>Update your personal details here.</CardDescription>
+            <CardHeader className="text-right">
+              <CardTitle className="flex items-center"><UserCircle2 className="ms-2 h-5 w-5" /> اطلاعات پروفایل</CardTitle>
+              <CardDescription>جزئیات شخصی خود را در اینجا به‌روزرسانی کنید.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
                 <div className="flex flex-col items-center space-y-2">
                   <Avatar className="h-32 w-32">
                     <AvatarImage src={avatarPreview} alt={name} data-ai-hint="admin avatar" />
-                    <AvatarFallback>{name.split(" ").map(n => n[0]).join("").toUpperCase() || "AD"}</AvatarFallback>
+                    <AvatarFallback>{name.split(" ").map(n => n[0]).join("").toUpperCase() || "کا"}</AvatarFallback>
                   </Avatar>
                   <Input id="avatarUpload" type="file" onChange={handleAvatarUpload} accept="image/*" className="hidden" />
                   <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('avatarUpload')?.click()} disabled={isSaving}>
-                    <UploadCloud className="mr-2 h-4 w-4" /> Change Avatar
+                    <UploadCloud className="ms-2 h-4 w-4" /> تغییر آواتار
                   </Button>
                 </div>
                 <div className="flex-1 space-y-4 w-full">
                   <div className="space-y-1">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name">نام کامل</Label>
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isSaving} />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="email">Email Address</Label>
+                    <Label htmlFor="email">آدرس ایمیل</Label>
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSaving} />
                   </div>
                 </div>
@@ -108,32 +104,31 @@ export default function AdminProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Change Password Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center"><KeyRound className="mr-2 h-5 w-5" /> Change Password</CardTitle>
-              <CardDescription>Update your account password.</CardDescription>
+            <CardHeader className="text-right">
+              <CardTitle className="flex items-center"><KeyRound className="ms-2 h-5 w-5" /> تغییر رمز عبور</CardTitle>
+              <CardDescription>رمز عبور حساب خود را به‌روزرسانی کنید.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="currentPassword">Current Password</Label>
+                <Label htmlFor="currentPassword">رمز عبور فعلی</Label>
                 <Input id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} disabled={isSaving} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="newPassword">New Password</Label>
+                <Label htmlFor="newPassword">رمز عبور جدید</Label>
                 <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={isSaving} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Label htmlFor="confirmPassword">تایید رمز عبور جدید</Label>
                 <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isSaving} />
               </div>
             </CardContent>
           </Card>
         </div>
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-start"> {/* justify-start for RTL */}
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
+            {isSaving ? "در حال ذخیره..." : "ذخیره تغییرات"}
           </Button>
         </div>
       </form>

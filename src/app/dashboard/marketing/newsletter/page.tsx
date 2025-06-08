@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -19,15 +20,16 @@ interface Subscriber {
   id: string;
   email: string;
   subscriptionDate: string;
-  source: string; // e.g., 'Website Footer', 'Checkout Opt-in'
+  source: string;
 }
 
+// Mock data translations
 const mockSubscribers: Subscriber[] = [
-  { id: "sub001", email: "subscriber1@example.com", subscriptionDate: "2023-09-15", source: "Website Footer" },
-  { id: "sub002", email: "coffee.lover@example.net", subscriptionDate: "2023-10-01", source: "Checkout Opt-in" },
-  { id: "sub003", email: "testuser@example.org", subscriptionDate: "2023-08-20", source: "Popup Form" },
-  { id: "sub004", email: "another.email@example.com", subscriptionDate: "2023-10-10", source: "Website Footer" },
-  { id: "sub005", email: "earlybird@example.io", subscriptionDate: "2023-07-01", source: "Event Signup" },
+  { id: "sub001", email: "subscriber1@example.com", subscriptionDate: "2023-09-15", source: "فوتر وب‌سایت" },
+  { id: "sub002", email: "coffee.lover@example.net", subscriptionDate: "2023-10-01", source: "انتخاب در پرداخت" },
+  { id: "sub003", email: "testuser@example.org", subscriptionDate: "2023-08-20", source: "فرم پاپ‌آپ" },
+  { id: "sub004", email: "another.email@example.com", subscriptionDate: "2023-10-10", source: "فوتر وب‌سایت" },
+  { id: "sub005", email: "earlybird@example.io", subscriptionDate: "2023-07-01", source: "ثبت‌نام رویداد" },
 ];
 
 export default function NewsletterPage() {
@@ -39,12 +41,11 @@ export default function NewsletterPage() {
   );
 
   const handleExportCsv = () => {
-    // Mock CSV export
-    const headers = "ID,Email,Subscription Date,Source\n";
+    const headers = "شناسه,ایمیل,تاریخ اشتراک,منبع\n";
     const csvContent = filteredSubscribers.map(s =>
       `${s.id},${s.email},${s.subscriptionDate},${s.source}`
     ).join("\n");
-    const blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\uFEFF" + headers + csvContent], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel UTF-8
     const link = document.createElement("a");
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
@@ -55,38 +56,37 @@ export default function NewsletterPage() {
       link.click();
       document.body.removeChild(link);
     }
-    alert("CSV export initiated (mock).");
+    alert("خروجی CSV شروع شد (آزمایشی).");
   };
   
   const handleDeleteSubscriber = (subscriberId: string) => {
-     if (window.confirm("Are you sure you want to remove this subscriber?")) {
+     if (window.confirm("آیا از حذف این مشترک مطمئن هستید؟")) {
       setSubscribers(prev => prev.filter(s => s.id !== subscriberId));
     }
   };
 
   const getRowActions = (subscriber: Subscriber): ActionItem[] => [
-    { label: "Remove Subscriber", icon: Trash2, onClick: () => handleDeleteSubscriber(subscriber.id), isDestructive: true },
+    { label: "حذف مشترک", icon: Trash2, onClick: () => handleDeleteSubscriber(subscriber.id), isDestructive: true },
   ];
-
 
   return (
     <>
       <PageHeader
-        title="Newsletter Subscribers"
-        description="Manage and export your newsletter subscriber list."
+        title="مشترکین خبرنامه"
+        description="لیست مشترکین خبرنامه خود را مدیریت و صادر کنید."
         actions={
           <Button onClick={handleExportCsv}>
-            <FileDown className="mr-2 h-4 w-4" /> Export CSV
+            <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
           </Button>
         }
       />
       <div className="mb-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by email..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجو بر اساس ایمیل..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -97,19 +97,19 @@ export default function NewsletterPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email Address</TableHead>
-              <TableHead>Subscription Date</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>آدرس ایمیل</TableHead>
+              <TableHead>تاریخ اشتراک</TableHead>
+              <TableHead>منبع</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredSubscribers.map((subscriber) => (
               <TableRow key={subscriber.id}>
                 <TableCell className="font-medium">{subscriber.email}</TableCell>
-                <TableCell>{new Date(subscriber.subscriptionDate).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(subscriber.subscriptionDate).toLocaleDateString('fa-IR')}</TableCell>
                 <TableCell>{subscriber.source}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(subscriber)} />
                 </TableCell>
               </TableRow>
@@ -119,7 +119,7 @@ export default function NewsletterPage() {
       </div>
       {filteredSubscribers.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No subscribers found.
+            هیچ مشترکی یافت نشد.
         </div>
       )}
     </>

@@ -66,33 +66,50 @@ interface Order {
   items: OrderItem[];
 }
 
+// Mock data (translation of names)
 const mockOrders: Order[] = [
   {
-    id: "ORD001",
-    customer: { name: "Alice Wonderland", email: "alice@example.com", avatar: "AW" },
+    id: "سف001", // ORD001
+    customer: { name: "آلیس نادری", email: "alice@example.com", avatar: "آن" },
     date: "2023-10-26",
-    status: "Delivered",
+    status: "Delivered", // تحویل شده
     total: 75.50,
-    paymentStatus: "Paid",
+    paymentStatus: "Paid", // پرداخت شده
     items: [
-      { id: "item01", name: "Espresso Roast (1kg)", quantity: 1, price: 25.00, image: "https://placehold.co/100x100.png" },
-      { id: "item02", name: "Espresso Edge Mug", quantity: 2, price: 15.00, image: "https://placehold.co/100x100.png" },
-      { id: "item03", name: "Artisan Croissant", quantity: 3, price: 6.8333, image: "https://placehold.co/100x100.png" },
+      { id: "item01", name: "قهوه اسپرسو (۱ کیلوگرم)", quantity: 1, price: 25.00, image: "https://placehold.co/100x100.png" },
+      { id: "item02", name: "ماگ اسپرسو اج", quantity: 2, price: 15.00, image: "https://placehold.co/100x100.png" },
+      { id: "item03", name: "کروسان مخصوص", quantity: 3, price: 6.8333, image: "https://placehold.co/100x100.png" },
     ],
   },
   {
-    id: "ORD002",
-    customer: { name: "Bob The Builder", email: "bob@example.com", avatar: "BB" },
+    id: "سف002", // ORD002
+    customer: { name: "باب احمدی", email: "bob@example.com", avatar: "با" },
     date: "2023-10-25",
-    status: "Processing",
+    status: "Processing", // در حال پردازش
     total: 42.00,
-    paymentStatus: "Paid",
+    paymentStatus: "Paid", // پرداخت شده
     items: [
-      { id: "item04", name: "Cold Brew Concentrate", quantity: 1, price: 18.00, image: "https://placehold.co/100x100.png" },
-      { id: "item05", name: "Travel Tumbler", quantity: 1, price: 24.00, image: "https://placehold.co/100x100.png" },
+      { id: "item04", name: "عصاره کلد برو", quantity: 1, price: 18.00, image: "https://placehold.co/100x100.png" },
+      { id: "item05", name: "لیوان مسافرتی", quantity: 1, price: 24.00, image: "https://placehold.co/100x100.png" },
     ],
   },
 ];
+
+// Translated statuses
+const orderStatusTranslations: Record<OrderStatus, string> = {
+  Pending: "در انتظار",
+  Processing: "در حال پردازش",
+  Shipped: "ارسال شده",
+  Delivered: "تحویل شده",
+  Cancelled: "لغو شده",
+};
+
+const paymentStatusTranslations: Record<PaymentStatus, string> = {
+  Paid: "پرداخت شده",
+  Unpaid: "پرداخت نشده",
+  Refunded: "مسترد شده",
+};
+
 
 const getStatusBadgeVariant = (status: OrderStatus) => {
   switch (status) {
@@ -124,10 +141,9 @@ export default function OrdersPage() {
   const [isNewOrderFormOpen, setIsNewOrderFormOpen] = React.useState(false);
   const [isSubmittingNewOrder, setIsSubmittingNewOrder] = React.useState(false);
 
-  // New Order Form State
   const [newOrderCustomerName, setNewOrderCustomerName] = React.useState("");
   const [newOrderCustomerEmail, setNewOrderCustomerEmail] = React.useState("");
-  const [newOrderItems, setNewOrderItems] = React.useState(""); // Simple text for now
+  const [newOrderItems, setNewOrderItems] = React.useState("");
   const [newOrderTotal, setNewOrderTotal] = React.useState("");
 
 
@@ -154,11 +170,10 @@ export default function OrdersPage() {
   const handleAddNewOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingNewOrder(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newOrder: Order = {
-      id: `ORD${Date.now().toString().slice(-4)}`,
+      id: `سف${Date.now().toString().slice(-4)}`,
       customer: { 
         name: newOrderCustomerName, 
         email: newOrderCustomerEmail, 
@@ -168,13 +183,13 @@ export default function OrdersPage() {
       status: "Pending",
       total: parseFloat(newOrderTotal) || 0,
       paymentStatus: "Unpaid",
-      items: [{ id: "item-custom", name: newOrderItems.split('\n')[0] || "Custom Item", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }], // Simplified
+      items: [{ id: "item-custom", name: newOrderItems.split('\n')[0] || "آیتم سفارشی", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }],
     };
     setOrders(prevOrders => [newOrder, ...prevOrders]);
     
     toast({
-      title: "Order Created",
-      description: `New order ${newOrder.id} has been successfully created.`,
+      title: "سفارش ایجاد شد",
+      description: `سفارش جدید ${newOrder.id} با موفقیت ایجاد شد.`,
     });
     setIsSubmittingNewOrder(false);
     setIsNewOrderFormOpen(false);
@@ -184,15 +199,15 @@ export default function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="Orders Management"
-        description="View, track, and manage all customer orders."
+        title="مدیریت سفارشات"
+        description="مشاهده، پیگیری و مدیریت تمام سفارشات مشتریان."
         actions={
           <div className="flex gap-2">
             <Button variant="outline">
-              <FileDown className="mr-2 h-4 w-4" /> Export CSV
+              <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
             </Button>
             <Button onClick={handleOpenNewOrderForm}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add New Order
+              <PlusCircle className="ms-2 h-4 w-4" /> افزودن سفارش جدید
             </Button>
           </div>
         }
@@ -200,26 +215,24 @@ export default function OrdersPage() {
 
       <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1 w-full md:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search orders by ID, customer..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجوی سفارش بر اساس شناسه، مشتری..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OrderStatus | "all")}>
           <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="فیلتر بر اساس وضعیت" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Processing">Processing</SelectItem>
-            <SelectItem value="Shipped">Shipped</SelectItem>
-            <SelectItem value="Delivered">Delivered</SelectItem>
-            <SelectItem value="Cancelled">Cancelled</SelectItem>
+            <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+            {Object.entries(orderStatusTranslations).map(([key, value]) => (
+              <SelectItem key={key} value={key}>{value}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -228,13 +241,13 @@ export default function OrdersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>شناسه سفارش</TableHead>
+              <TableHead>مشتری</TableHead>
+              <TableHead>تاریخ</TableHead>
+              <TableHead>وضعیت</TableHead>
+              <TableHead>پرداخت</TableHead>
+              <TableHead className="text-left">مجموع</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -253,47 +266,47 @@ export default function OrdersPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(order.date).toLocaleDateString('fa-IR')}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                  <Badge variant={getStatusBadgeVariant(order.status)}>{orderStatusTranslations[order.status]}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>{order.paymentStatus}</Badge>
+                  <Badge variant={getPaymentBadgeVariant(order.paymentStatus)}>{paymentStatusTranslations[order.paymentStatus]}</Badge>
                 </TableCell>
-                <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">{order.total.toLocaleString('fa-IR', { style: 'currency', currency: 'IRR' }).replace("ریال", "تومان")}</TableCell>
+                <TableCell className="text-left">
                   <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)}>
                     <Eye className="h-4 w-4" />
-                     <span className="sr-only">View Details</span>
+                     <span className="sr-only">مشاهده جزئیات</span>
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">More actions</span>
+                        <span className="sr-only">عملیات بیشتر</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleViewDetails(order)}>
-                        <Eye className="mr-2 h-4 w-4" /> View Details
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuLabel>عملیات</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleViewDetails(order)} className="flex items-center">
+                        <Eye className="ms-2 h-4 w-4" /> مشاهده جزئیات
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" /> Edit Order
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>
-                        <Truck className="mr-2 h-4 w-4" /> Mark as Shipped
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <CheckCircle className="mr-2 h-4 w-4" /> Mark as Delivered
-                      </DropdownMenuItem>
-                       <DropdownMenuItem>
-                        <RefreshCcw className="mr-2 h-4 w-4" /> Change Status
+                      <DropdownMenuItem className="flex items-center">
+                        <Edit className="ms-2 h-4 w-4" /> ویرایش سفارش
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">
-                        <XCircle className="mr-2 h-4 w-4" /> Cancel Order
+                      <DropdownMenuItem className="flex items-center">
+                        <Truck className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان ارسال شده
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <CheckCircle className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان تحویل شده
+                      </DropdownMenuItem>
+                       <DropdownMenuItem className="flex items-center">
+                        <RefreshCcw className="ms-2 h-4 w-4" /> تغییر وضعیت
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive flex items-center">
+                        <XCircle className="ms-2 h-4 w-4" /> لغو سفارش
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -305,32 +318,31 @@ export default function OrdersPage() {
       </div>
       {filteredOrders.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No orders found matching your criteria.
+            سفارشی با معیارهای شما یافت نشد.
         </div>
       )}
 
-      {/* View Order Details Sheet */}
       <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <SheetContent className="sm:max-w-lg w-[90vw] p-0">
+        <SheetContent side="left" className="sm:max-w-lg w-[90vw] p-0"> {/* side="left" for RTL */}
           {selectedOrder && (
             <>
               <SheetHeader className="p-6 border-b">
-                <SheetTitle className="text-2xl">Order Details: {selectedOrder.id}</SheetTitle>
+                <SheetTitle className="text-2xl">جزئیات سفارش: {selectedOrder.id}</SheetTitle>
                 <SheetDescription>
-                  Placed on {new Date(selectedOrder.date).toLocaleDateString()} by {selectedOrder.customer.name}
+                  ثبت شده در {new Date(selectedOrder.date).toLocaleDateString('fa-IR')} توسط {selectedOrder.customer.name}
                 </SheetDescription>
               </SheetHeader>
               <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Customer Information</h3>
+                  <h3 className="text-lg font-semibold mb-2">اطلاعات مشتری</h3>
                   <div className="space-y-1 text-sm">
-                    <p><strong>Name:</strong> {selectedOrder.customer.name}</p>
-                    <p><strong>Email:</strong> {selectedOrder.customer.email}</p>
+                    <p><strong>نام:</strong> {selectedOrder.customer.name}</p>
+                    <p><strong>ایمیل:</strong> {selectedOrder.customer.email}</p>
                   </div>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Order Items</h3>
+                  <h3 className="text-lg font-semibold mb-2">آیتم‌های سفارش</h3>
                   <ul className="space-y-3">
                     {selectedOrder.items.map(item => (
                       <li key={item.id} className="flex items-center gap-4">
@@ -342,63 +354,62 @@ export default function OrdersPage() {
                         />
                         <div className="flex-1">
                           <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">Qty: {item.quantity} &bull; Price: ${item.price.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">تعداد: {item.quantity} &bull; قیمت واحد: {item.price.toLocaleString('fa-IR')} تومان</p>
                         </div>
-                        <p className="font-medium">${(item.quantity * item.price).toFixed(2)}</p>
+                        <p className="font-medium">{(item.quantity * item.price).toLocaleString('fa-IR')} تومان</p>
                       </li>
                     ))}
                   </ul>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Price Breakdown</h3>
+                  <h3 className="text-lg font-semibold mb-2">جزئیات قیمت</h3>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between"><span>Subtotal:</span> <span>${selectedOrder.total.toFixed(2)}</span></div>
-                    <div className="flex justify-between"><span>Shipping:</span> <span>$0.00</span></div>
-                    <div className="flex justify-between"><span>Tax:</span> <span>$0.00</span></div>
+                    <div className="flex justify-between"><span>جمع فرعی:</span> <span>{selectedOrder.total.toLocaleString('fa-IR')} تومان</span></div>
+                    <div className="flex justify-between"><span>هزینه ارسال:</span> <span>۰ تومان</span></div>
+                    <div className="flex justify-between"><span>مالیات:</span> <span>۰ تومان</span></div>
                     <Separator className="my-2"/>
-                    <div className="flex justify-between font-semibold text-base"><span>Total:</span> <span>${selectedOrder.total.toFixed(2)}</span></div>
+                    <div className="flex justify-between font-semibold text-base"><span>مجموع کل:</span> <span>{selectedOrder.total.toLocaleString('fa-IR')} تومان</span></div>
                   </div>
                 </div>
                  <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Status</h3>
+                  <h3 className="text-lg font-semibold mb-2">وضعیت</h3>
                   <div className="flex items-center gap-4">
-                    <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="text-sm px-3 py-1">{selectedOrder.status}</Badge>
-                    <Badge variant={getPaymentBadgeVariant(selectedOrder.paymentStatus)} className="text-sm px-3 py-1">{selectedOrder.paymentStatus}</Badge>
+                    <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="text-sm px-3 py-1">{orderStatusTranslations[selectedOrder.status]}</Badge>
+                    <Badge variant={getPaymentBadgeVariant(selectedOrder.paymentStatus)} className="text-sm px-3 py-1">{paymentStatusTranslations[selectedOrder.paymentStatus]}</Badge>
                   </div>
                 </div>
               </div>
               <SheetFooter className="p-6 border-t">
-                <Button variant="outline" onClick={() => setSelectedOrder(null)}>Close</Button>
-                <Button>Update Order</Button>
+                <Button variant="outline" onClick={() => setSelectedOrder(null)}>بستن</Button>
+                <Button>به‌روزرسانی سفارش</Button>
               </SheetFooter>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Add New Order Dialog */}
       <Dialog open={isNewOrderFormOpen} onOpenChange={setIsNewOrderFormOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add New Order</DialogTitle>
-            <DialogDescription>Manually create a new order. Specify customer details and items.</DialogDescription>
+          <DialogHeader className="text-right">
+            <DialogTitle>افزودن سفارش جدید</DialogTitle>
+            <DialogDescription>سفارش جدید را به صورت دستی ایجاد کنید. جزئیات مشتری و آیتم‌ها را مشخص کنید.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddNewOrderSubmit} className="space-y-4 py-4">
             <div>
-              <Label htmlFor="newOrderCustomerName">Customer Name</Label>
+              <Label htmlFor="newOrderCustomerName">نام مشتری</Label>
               <Input 
                 id="newOrderCustomerName" 
                 value={newOrderCustomerName} 
                 onChange={(e) => setNewOrderCustomerName(e.target.value)} 
-                placeholder="John Doe" 
+                placeholder="مثلا: جان دو" 
                 required 
                 disabled={isSubmittingNewOrder}
               />
             </div>
             <div>
-              <Label htmlFor="newOrderCustomerEmail">Customer Email</Label>
+              <Label htmlFor="newOrderCustomerEmail">ایمیل مشتری</Label>
               <Input 
                 id="newOrderCustomerEmail" 
                 type="email" 
@@ -410,37 +421,37 @@ export default function OrdersPage() {
               />
             </div>
             <div>
-              <Label htmlFor="newOrderItems">Items (Name, Qty, Price per line - simplified)</Label>
+              <Label htmlFor="newOrderItems">آیتم‌ها (نام، تعداد، قیمت در هر خط - ساده شده)</Label>
               <Textarea 
                 id="newOrderItems" 
                 value={newOrderItems} 
                 onChange={(e) => setNewOrderItems(e.target.value)} 
-                placeholder="Example: Espresso, 2, 3.50\nLatte, 1, 4.00" 
+                placeholder="مثال: اسپرسو، ۲، ۳۵۰۰۰ تومان\nلاته، ۱، ۴۰۰۰۰ تومان" 
                 rows={4}
                 disabled={isSubmittingNewOrder}
               />
-              <p className="text-xs text-muted-foreground mt-1">For now, please calculate total manually.</p>
+              <p className="text-xs text-muted-foreground mt-1">فعلا لطفا مجموع را دستی محاسبه کنید.</p>
             </div>
             <div>
-              <Label htmlFor="newOrderTotal">Order Total ($)</Label>
+              <Label htmlFor="newOrderTotal">مجموع سفارش (تومان)</Label>
               <Input 
                 id="newOrderTotal" 
                 type="number" 
                 value={newOrderTotal} 
                 onChange={(e) => setNewOrderTotal(e.target.value)} 
-                placeholder="7.50" 
-                step="0.01" 
+                placeholder="۷۵۰۰۰" 
+                step="1000" 
                 required 
                 disabled={isSubmittingNewOrder}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsNewOrderFormOpen(false)} disabled={isSubmittingNewOrder}>
-                Cancel
+                انصراف
               </Button>
               <Button type="submit" disabled={isSubmittingNewOrder}>
-                {isSubmittingNewOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmittingNewOrder ? "Creating..." : "Create Order"}
+                {isSubmittingNewOrder && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                {isSubmittingNewOrder ? "در حال ایجاد..." : "ایجاد سفارش"}
               </Button>
             </DialogFooter>
           </form>

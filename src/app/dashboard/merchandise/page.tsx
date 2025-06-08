@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud, Loader2 } from "lucide-react";
+import { PlusCircle, Search, Edit, Trash2, UploadCloud, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -40,26 +40,26 @@ interface Product {
   imageFile?: File | null;
 }
 
+// Mock data translations
 const mockProducts: Product[] = [
-  { id: "prod001", name: "Espresso Edge Mug", price: 15.00, stock: 120, imageUrl: "https://placehold.co/80x80.png", category: "Drinkware", description: "Signature 12oz ceramic mug with Espresso Edge logo." },
-  { id: "prod002", name: "Whole Bean Coffee (1kg)", price: 25.00, stock: 75, imageUrl: "https://placehold.co/80x80.png", category: "Coffee Beans", description: "Our signature espresso roast, whole beans." },
-  { id: "prod003", name: "Travel Tumbler", price: 22.50, stock: 50, imageUrl: "https://placehold.co/80x80.png", category: "Drinkware", description: "Insulated travel tumbler, 16oz." },
-  { id: "prod004", name: "Barista Apron", price: 30.00, stock: 30, imageUrl: "https://placehold.co/80x80.png", category: "Apparel", description: "Durable canvas barista apron with pockets." },
-  { id: "prod005", name: "Gift Card - $25", price: 25.00, stock: 999, imageUrl: "https://placehold.co/80x80.png", category: "Gift Cards", description: "$25 gift card, redeemable in-store or online." },
+  { id: "prod001", name: "ماگ اسپرسو اج", price: 150000, stock: 120, imageUrl: "https://placehold.co/80x80.png", category: "ظروف نوشیدنی", description: "ماگ سرامیکی ۱۲ انسی با لوگوی اسپرسو اج." },
+  { id: "prod002", name: "دانه قهوه کامل (۱ کیلوگرم)", price: 250000, stock: 75, imageUrl: "https://placehold.co/80x80.png", category: "دانه‌های قهوه", description: "رست اسپرسوی ویژه ما، دانه‌های کامل." },
+  { id: "prod003", name: "لیوان مسافرتی", price: 225000, stock: 50, imageUrl: "https://placehold.co/80x80.png", category: "ظروف نوشیدنی", description: "لیوان مسافرتی عایق‌دار، ۱۶ انس." },
+  { id: "prod004", name: "پیشبند باریستا", price: 300000, stock: 30, imageUrl: "https://placehold.co/80x80.png", category: "پوشاک", description: "پیشبند باریستای کنفی مقاوم با جیب." },
+  { id: "prod005", name: "کارت هدیه - ۲۵۰٬۰۰۰ تومان", price: 250000, stock: 999, imageUrl: "https://placehold.co/80x80.png", category: "کارت‌های هدیه", description: "کارت هدیه ۲۵۰٬۰۰۰ تومانی، قابل استفاده در فروشگاه یا آنلاین." },
 ];
 
-const productCategories = ["All", "Drinkware", "Coffee Beans", "Apparel", "Accessories", "Gift Cards"];
+const productCategories = ["همه", "ظروف نوشیدنی", "دانه‌های قهوه", "پوشاک", "لوازم جانبی", "کارت‌های هدیه"];
 
 export default function MerchandisePage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [categoryFilter, setCategoryFilter] = React.useState("All");
+  const [categoryFilter, setCategoryFilter] = React.useState("همه");
   const [products, setProducts] = React.useState<Product[]>(mockProducts);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Form state
   const [productName, setProductName] = React.useState("");
   const [productCategory, setProductCategory] = React.useState("");
   const [productPrice, setProductPrice] = React.useState("");
@@ -68,10 +68,9 @@ export default function MerchandisePage() {
   const [productImagePreview, setProductImagePreview] = React.useState<string | null>(null);
   const [productImageFile, setProductImageFile] = React.useState<File | null>(null);
 
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "All" || product.category === categoryFilter;
+    const matchesCategory = categoryFilter === "همه" || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -100,11 +99,11 @@ export default function MerchandisePage() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+    if (window.confirm("آیا از حذف این محصول مطمئن هستید؟")) {
       setProducts(prevProducts => prevProducts.filter(product => product.id !== productId));
       toast({
-        title: "Product Deleted",
-        description: "The product has been removed from merchandise.",
+        title: "محصول حذف شد",
+        description: "محصول از لیست کالاها حذف گردید.",
       });
     }
   };
@@ -112,8 +111,6 @@ export default function MerchandisePage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newProductData: Omit<Product, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string, imageFile?: File | null } = {
@@ -131,8 +128,8 @@ export default function MerchandisePage() {
         prevProducts.map(prod => prod.id === editingProduct.id ? { ...editingProduct, ...newProductData, id: editingProduct.id, imageUrl: productImagePreview || editingProduct.imageUrl } : prod)
       );
       toast({
-        title: "Product Updated",
-        description: `${productName} has been successfully updated.`,
+        title: "محصول به‌روزرسانی شد",
+        description: `${productName} با موفقیت به‌روزرسانی شد.`,
       });
     } else {
       setProducts(prevProducts => [
@@ -140,8 +137,8 @@ export default function MerchandisePage() {
         { ...newProductData, id: `prod${Date.now()}`, imageUrl: productImagePreview || "https://placehold.co/80x80.png" } as Product,
       ]);
       toast({
-        title: "Product Added",
-        description: `${productName} has been successfully added to merchandise.`,
+        title: "محصول اضافه شد",
+        description: `${productName} با موفقیت به لیست کالاها اضافه شد.`,
       });
     }
     setIsLoading(false);
@@ -161,30 +158,30 @@ export default function MerchandisePage() {
   };
   
   const getRowActions = (product: Product): ActionItem[] => [
-    { label: "Edit Product", icon: Edit, onClick: () => handleEditProduct(product) },
+    { label: "ویرایش محصول", icon: Edit, onClick: () => handleEditProduct(product) },
     { label: "---" },
-    { label: "Delete Product", icon: Trash2, onClick: () => handleDeleteProduct(product.id), isDestructive: true },
+    { label: "حذف محصول", icon: Trash2, onClick: () => handleDeleteProduct(product.id), isDestructive: true },
   ];
 
   return (
     <>
       <PageHeader
-        title="Merchandise Products"
-        description="Manage your store's merchandise items."
+        title="کالاهای فروشگاه"
+        description="کالاهای فروشگاه خود را مدیریت کنید."
         actions={
           <Button onClick={handleAddNewProduct} disabled={isLoading}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
+            <PlusCircle className="ms-2 h-4 w-4" /> افزودن محصول جدید
           </Button>
         }
       />
 
       <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1 w-full md:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search products..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجوی محصولات..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={isLoading}
@@ -192,7 +189,7 @@ export default function MerchandisePage() {
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoading}>
           <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by category" />
+            <SelectValue placeholder="فیلتر بر اساس دسته‌بندی" />
           </SelectTrigger>
           <SelectContent>
             {productCategories.map(cat => (
@@ -206,12 +203,12 @@ export default function MerchandisePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="w-[80px]">تصویر</TableHead>
+              <TableHead>نام</TableHead>
+              <TableHead>دسته‌بندی</TableHead>
+              <TableHead>قیمت</TableHead>
+              <TableHead>موجودی</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -229,9 +226,9 @@ export default function MerchandisePage() {
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>{product.category}</TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
+                <TableCell>{product.price.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell>{product.stock}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(product)} />
                 </TableCell>
               </TableRow>
@@ -241,32 +238,32 @@ export default function MerchandisePage() {
       </div>
       {filteredProducts.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No products found matching your criteria.
+            محصولی با معیارهای شما یافت نشد.
         </div>
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingProduct ? "ویرایش محصول" : "افزودن محصول جدید"}</DialogTitle>
             <DialogDescription>
-              {editingProduct ? "Update product details." : "Fill in new product details."}
+              {editingProduct ? "جزئیات محصول را به‌روزرسانی کنید." : "جزئیات محصول جدید را پر کنید."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="grid gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="productName">Product Name</Label>
-                    <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g., Signature Mug" required disabled={isLoading} />
+                    <Label htmlFor="productName">نام محصول</Label>
+                    <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="مثلا ماگ ویژه" required disabled={isLoading} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="productCategory">Category</Label>
+                    <Label htmlFor="productCategory">دسته‌بندی</Label>
                     <Select value={productCategory} onValueChange={setProductCategory} required disabled={isLoading}>
                     <SelectTrigger id="productCategory">
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder="انتخاب دسته‌بندی" />
                     </SelectTrigger>
                     <SelectContent>
-                        {productCategories.filter(c => c !== "All").map(cat => (
+                        {productCategories.filter(c => c !== "همه").map(cat => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
                     </SelectContent>
@@ -275,36 +272,36 @@ export default function MerchandisePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="productPrice">Price</Label>
-                    <Input id="productPrice" type="number" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="e.g., 15.00" step="0.01" required disabled={isLoading} />
+                    <Label htmlFor="productPrice">قیمت (تومان)</Label>
+                    <Input id="productPrice" type="number" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="مثلا ۱۵۰۰۰۰" step="1000" required disabled={isLoading} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="productStock">Stock Quantity</Label>
-                    <Input id="productStock" type="number" value={productStock} onChange={(e) => setProductStock(e.target.value)} placeholder="e.g., 100" step="1" required disabled={isLoading} />
+                    <Label htmlFor="productStock">تعداد موجودی</Label>
+                    <Input id="productStock" type="number" value={productStock} onChange={(e) => setProductStock(e.target.value)} placeholder="مثلا ۱۰۰" step="1" required disabled={isLoading} />
                 </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="productDescription">Description (Optional)</Label>
-                <Textarea id="productDescription" value={productDescription} onChange={(e) => setProductDescription(e.target.value)} placeholder="Short description of the product..." disabled={isLoading} />
+                <Label htmlFor="productDescription">توضیحات (اختیاری)</Label>
+                <Textarea id="productDescription" value={productDescription} onChange={(e) => setProductDescription(e.target.value)} placeholder="توضیح مختصری از محصول..." disabled={isLoading} />
             </div>
              <div className="space-y-2">
-              <Label htmlFor="productImage">Image</Label>
+              <Label htmlFor="productImage">تصویر</Label>
               <div className="flex items-center gap-4">
                 {productImagePreview && (
-                  <Image src={productImagePreview} alt="Preview" width={80} height={80} className="rounded-md object-cover" data-ai-hint="product preview" />
+                  <Image src={productImagePreview} alt="پیش‌نمایش" width={80} height={80} className="rounded-md object-cover" data-ai-hint="product preview" />
                 )}
                 <Input id="productImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
                 <Button type="button" variant="outline" onClick={() => document.getElementById('productImage')?.click()} disabled={isLoading}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> {productImagePreview && !productImageFile ? "Change Image" : "Upload Image"}
+                  <UploadCloud className="ms-2 h-4 w-4" /> {productImagePreview && !productImageFile ? "تغییر تصویر" : "بارگذاری تصویر"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Recommended size: 400x400px. Max 2MB.</p>
+              <p className="text-xs text-muted-foreground">اندازه پیشنهادی: ۴۰۰×۴۰۰ پیکسل. حداکثر ۲ مگابایت.</p>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingProduct ? "Save Changes" : "Add Product"}
+                {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                {editingProduct ? "ذخیره تغییرات" : "افزودن محصول"}
               </Button>
             </DialogFooter>
           </form>
@@ -313,5 +310,3 @@ export default function MerchandisePage() {
     </>
   );
 }
-
-    

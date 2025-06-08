@@ -16,7 +16,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,6 +32,7 @@ import { Calendar as CalendarIcon } from "lucide-react"
 import { format, addDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
+import { faIR } from "date-fns/locale"; // For Persian calendar
 
 type DiscountType = "Percentage" | "Fixed Amount";
 type DiscountStatus = "Active" | "Inactive" | "Expired";
@@ -49,11 +49,23 @@ interface DiscountCode {
   timesUsed?: number;
 }
 
+// Mock data translations
 const mockDiscounts: DiscountCode[] = [
   { id: "disc001", code: "WELCOME10", type: "Percentage", value: 10, startDate: new Date(2023, 0, 1), endDate: new Date(2024, 11, 31), status: "Active", usageLimit: 1000, timesUsed: 150 },
-  { id: "disc002", code: "SUMMER5OFF", type: "Fixed Amount", value: 5, startDate: new Date(2023, 5, 1), endDate: new Date(2023, 7, 31), status: "Expired", usageLimit: 500, timesUsed: 480 },
+  { id: "disc002", code: "SUMMER5OFF", type: "Fixed Amount", value: 50000, startDate: new Date(2023, 5, 1), endDate: new Date(2023, 7, 31), status: "Expired", usageLimit: 500, timesUsed: 480 },
   { id: "disc003", code: "HOLIDAYSPECIAL", type: "Percentage", value: 20, startDate: new Date(2023, 10, 15), status: "Inactive", usageLimit: 200, timesUsed: 0 },
 ];
+
+const discountTypeTranslations: Record<DiscountType, string> = {
+  Percentage: "درصدی",
+  "Fixed Amount": "مبلغ ثابت",
+};
+const discountStatusTranslations: Record<DiscountStatus, string> = {
+  Active: "فعال",
+  Inactive: "غیرفعال",
+  Expired: "منقضی شده",
+};
+
 
 export default function DiscountCodesPage() {
   const { toast } = useToast();
@@ -63,7 +75,6 @@ export default function DiscountCodesPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Form state
   const [code, setCode] = React.useState("");
   const [type, setType] = React.useState<DiscountType>("Percentage");
   const [value, setValue] = React.useState("");
@@ -98,11 +109,11 @@ export default function DiscountCodesPage() {
   };
 
   const handleDeleteDiscount = (discountId: string) => {
-    if (window.confirm("Are you sure you want to delete this discount code?")) {
+    if (window.confirm("آیا از حذف این کد تخفیف مطمئن هستید؟")) {
       setDiscounts(prev => prev.filter(d => d.id !== discountId));
       toast({
-        title: "Discount Deleted",
-        description: "The discount code has been removed.",
+        title: "کد تخفیف حذف شد",
+        description: "کد تخفیف مورد نظر حذف گردید.",
       });
     }
   };
@@ -110,8 +121,6 @@ export default function DiscountCodesPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newDiscountData: Omit<DiscountCode, 'id' | 'status' | 'timesUsed'> & { id?: string, status?: DiscountStatus, timesUsed?: number } = {
@@ -131,14 +140,14 @@ export default function DiscountCodesPage() {
     if (editingDiscount) {
       setDiscounts(prev => prev.map(d => d.id === editingDiscount.id ? { ...editingDiscount, ...newDiscountData, status } : d));
       toast({
-        title: "Discount Updated",
-        description: `Discount code ${code} has been successfully updated.`,
+        title: "تخفیف به‌روزرسانی شد",
+        description: `کد تخفیف ${code} با موفقیت به‌روزرسانی شد.`,
       });
     } else {
       setDiscounts(prev => [...prev, { ...newDiscountData, id: `disc${Date.now()}`, status, timesUsed: 0 } as DiscountCode]);
       toast({
-        title: "Discount Created",
-        description: `Discount code ${code} has been successfully created.`,
+        title: "تخفیف ایجاد شد",
+        description: `کد تخفیف ${code} با موفقیت ایجاد شد.`,
       });
     }
     setIsLoading(false);
@@ -146,9 +155,9 @@ export default function DiscountCodesPage() {
   };
   
   const getRowActions = (discount: DiscountCode): ActionItem[] => [
-    { label: "Edit Code", icon: Edit, onClick: () => handleEditDiscount(discount) },
+    { label: "ویرایش کد", icon: Edit, onClick: () => handleEditDiscount(discount) },
     { label: "---" },
-    { label: "Delete Code", icon: Trash2, onClick: () => handleDeleteDiscount(discount.id), isDestructive: true },
+    { label: "حذف کد", icon: Trash2, onClick: () => handleDeleteDiscount(discount.id), isDestructive: true },
   ];
 
   const getStatusBadgeVariant = (status: DiscountStatus) => {
@@ -161,21 +170,21 @@ export default function DiscountCodesPage() {
   return (
     <>
       <PageHeader
-        title="Discount Codes"
-        description="Create and manage discount codes for your customers."
+        title="کدهای تخفیف"
+        description="کدهای تخفیف را برای مشتریان خود ایجاد و مدیریت کنید."
         actions={
           <Button onClick={handleAddNewDiscount} disabled={isLoading}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Create Discount Code
+            <PlusCircle className="ms-2 h-4 w-4" /> ایجاد کد تخفیف
           </Button>
         }
       />
       <div className="mb-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search discount codes..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجوی کدهای تخفیف..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={isLoading}
@@ -187,27 +196,27 @@ export default function DiscountCodesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Date Range</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Usage</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>کد</TableHead>
+              <TableHead>نوع</TableHead>
+              <TableHead>مقدار</TableHead>
+              <TableHead>بازه تاریخی</TableHead>
+              <TableHead>وضعیت</TableHead>
+              <TableHead>استفاده</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredDiscounts.map((discount) => (
               <TableRow key={discount.id}>
                 <TableCell className="font-medium">{discount.code}</TableCell>
-                <TableCell>{discount.type}</TableCell>
-                <TableCell>{discount.type === "Percentage" ? `${discount.value}%` : `$${discount.value.toFixed(2)}`}</TableCell>
+                <TableCell>{discountTypeTranslations[discount.type]}</TableCell>
+                <TableCell>{discount.type === "Percentage" ? `${discount.value}%` : `${discount.value.toLocaleString('fa-IR')} تومان`}</TableCell>
                 <TableCell>
-                  {format(discount.startDate, "LLL dd, y")} - {discount.endDate ? format(discount.endDate, "LLL dd, y") : "No Expiry"}
+                  {format(discount.startDate, "yyyy/MM/dd", { locale: faIR })} - {discount.endDate ? format(discount.endDate, "yyyy/MM/dd", { locale: faIR }) : "بدون انقضا"}
                 </TableCell>
-                <TableCell><Badge variant={getStatusBadgeVariant(discount.status)}>{discount.status}</Badge></TableCell>
+                <TableCell><Badge variant={getStatusBadgeVariant(discount.status)}>{discountStatusTranslations[discount.status]}</Badge></TableCell>
                 <TableCell>{discount.timesUsed || 0} / {discount.usageLimit || "∞"}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(discount)} />
                 </TableCell>
               </TableRow>
@@ -217,73 +226,74 @@ export default function DiscountCodesPage() {
       </div>
       {filteredDiscounts.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No discount codes found.
+            هیچ کد تخفیفی یافت نشد.
         </div>
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingDiscount ? "Edit Discount Code" : "Create New Discount Code"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingDiscount ? "ویرایش کد تخفیف" : "ایجاد کد تخفیف جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
             <div>
-              <Label htmlFor="code">Discount Code</Label>
-              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="E.g., SAVE10" required disabled={isLoading} />
+              <Label htmlFor="code">کد تخفیف</Label>
+              <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلا SAVE10" required disabled={isLoading} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">نوع</Label>
                 <Select value={type} onValueChange={(v) => setType(v as DiscountType)} disabled={isLoading}>
                   <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Percentage">Percentage</SelectItem>
-                    <SelectItem value="Fixed Amount">Fixed Amount</SelectItem>
+                    {Object.entries(discountTypeTranslations).map(([key, value]) => (
+                      <SelectItem key={key} value={key}>{value}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="value">Value</Label>
-                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "Percentage" ? "10" : "5.00"} step={type === "Percentage" ? "1" : "0.01"} required disabled={isLoading} />
+                <Label htmlFor="value">مقدار</Label>
+                <Input id="value" type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "Percentage" ? "10" : "50000"} step={type === "Percentage" ? "1" : "1000"} required disabled={isLoading} />
               </div>
             </div>
             <div>
-              <Label htmlFor="dateRange">Date Range</Label>
+              <Label htmlFor="dateRange">بازه تاریخی</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button id="dateRange" variant="outline" className="w-full justify-start text-left font-normal" disabled={isLoading}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
+                  <Button id="dateRange" variant="outline" className="w-full justify-start text-right font-normal" disabled={isLoading}>
+                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
-                          {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                          {format(dateRange.from, "PPP", { locale: faIR })} - {format(dateRange.to, "PPP", { locale: faIR })}
                         </>
                       ) : (
-                        format(dateRange.from, "LLL dd, y")
+                        format(dateRange.from, "PPP", { locale: faIR })
                       )
                     ) : (
-                      <span>Pick a date range</span>
+                      <span>انتخاب بازه تاریخی</span>
                     )}
+                    <CalendarIcon className="me-auto h-4 w-4" /> {/* me-auto for RTL */}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} disabled={isLoading} />
+                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} disabled={isLoading} locale={faIR} dir="rtl" />
                 </PopoverContent>
               </Popover>
             </div>
              <div>
-              <Label htmlFor="usageLimit">Usage Limit (Optional)</Label>
-              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="E.g., 100 (leave blank for unlimited)" disabled={isLoading} />
+              <Label htmlFor="usageLimit">محدودیت استفاده (اختیاری)</Label>
+              <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="مثلا ۱۰۰ (خالی برای نامحدود)" disabled={isLoading} />
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 space-x-reverse">
               <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={isLoading} />
-              <Label htmlFor="isActive">Active</Label>
+              <Label htmlFor="isActive">فعال</Label>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingDiscount ? "Save Changes" : "Create Code"}
+                {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                {editingDiscount ? "ذخیره تغییرات" : "ایجاد کد"}
               </Button>
             </DialogFooter>
           </form>
@@ -292,5 +302,3 @@ export default function DiscountCodesPage() {
     </>
   );
 }
-
-    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -13,7 +14,6 @@ import {
   Mail,
   TrendingUp,
   PlusCircle,
-  Upload,
   Settings,
   Coffee,
   Truck,
@@ -27,22 +27,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 
 const recentActivities = [
-  { id: 1, user: "Alice Smith", avatar: "AS", action: "placed a new order #12345", time: "5m ago", type: "order" },
-  { id: 2, user: "Bob Johnson", avatar: "BJ", action: "subscribed to the newsletter", time: "15m ago", type: "user" },
-  { id: 3, user: "Admin", avatar: "AD", action: "updated 'Espresso Blend' menu item", time: "30m ago", type: "menu" },
-  { id: 4, user: "Carol White", avatar: "CW", action: "left a 5-star review for 'Cold Brew'", time: "1h ago", type: "review" },
-  { id: 5, user: "David Green", avatar: "DG", action: "registered a new account", time: "2h ago", type: "user" },
+  { id: 1, user: "آلیس اسمیت", avatar: "آا", action: "سفارش جدید #۱۲۳۴۵ را ثبت کرد", time: "۵ دقیقه پیش", type: "order" },
+  { id: 2, user: "باب جانسون", avatar: "ب‌ج", action: "در خبرنامه مشترک شد", time: "۱۵ دقیقه پیش", type: "user" },
+  { id: 3, user: "ادمین", avatar: "اد", action: "آیتم منوی 'اسپرسو بلند' را به‌روزرسانی کرد", time: "۳۰ دقیقه پیش", type: "menu" },
+  { id: 4, user: "کارول وایت", avatar: "ک‌و", action: "یک نقد ۵ ستاره برای 'کلد برو' ثبت کرد", time: "۱ ساعت پیش", type: "review" },
+  { id: 5, user: "دیوید گرین", avatar: "دگ", action: "حساب کاربری جدیدی ایجاد کرد", time: "۲ ساعت پیش", type: "user" },
 ];
 
 const topItems = [
-  { id: 1, name: "Caramel Macchiato", category: "Drinks", sales: 120, revenue: "$720.00" },
-  { id: 2, name: "Espresso Edge Mug", category: "Merchandise", sales: 85, revenue: "$1275.00" },
-  { id: 3, name: "Croissant", category: "Food", sales: 250, revenue: "$875.00" },
-  { id: 4, name: "Whole Bean Coffee (1kg)", category: "Merchandise", sales: 60, revenue: "$1500.00" },
-  { id: 5, name: "Iced Latte", category: "Drinks", sales: 150, revenue: "$750.00" },
+  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷۲۰٬۰۰۰ تومان" },
+  { id: 2, name: "ماگ اسپرسو اج", category: "کالاها", sales: 85, revenue: "۱٬۲۷۵٬۰۰۰ تومان" },
+  { id: 3, name: "کروسان", category: "خوراکی", sales: 250, revenue: "۸۷۵٬۰۰۰ تومان" },
+  { id: 4, name: "دانه قهوه (۱ کیلوگرم)", category: "کالاها", sales: 60, revenue: "۱٬۵۰۰٬۰۰۰ تومان" },
+  { id: 5, name: "آیس لاته", category: "نوشیدنی‌ها", sales: 150, revenue: "۷۵۰٬۰۰۰ تومان" },
 ];
 
 const getIconForActivity = (type: string) => {
@@ -58,33 +57,33 @@ const getIconForActivity = (type: string) => {
 export default function DashboardPage() {
   return (
     <>
-      <PageHeader title="Dashboard Overview" description="Welcome back, Admin! Here's what's happening." />
+      <PageHeader title="نمای کلی داشبورد" description="خوش آمدید ادمین! آخرین وضعیت به شرح زیر است." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        <StatCard title="Total Sales" value="$12,345" icon={DollarSign} change="+5.2% from last month" changeType="positive" />
-        <StatCard title="Total Orders" value="867" icon={ShoppingCart} change="+2.1% from last month" changeType="positive" />
-        <StatCard title="New Users" value="45" icon={Users} change="-1.5% from last month" changeType="negative" />
-        <StatCard title="Subscribers" value="1,204" icon={Mail} change="+100 this week" changeType="positive" />
-        <StatCard title="Top Item" value="Caramel Macchiato" icon={TrendingUp} change="120 units sold" />
+        <StatCard title="کل فروش" value="۱۲٬۳۴۵٬۰۰۰ تومان" icon={DollarSign} change="۵.۲٪+ از ماه گذشته" changeType="positive" />
+        <StatCard title="کل سفارشات" value="۸۶۷" icon={ShoppingCart} change="۲.۱٪+ از ماه گذشته" changeType="positive" />
+        <StatCard title="کاربران جدید" value="۴۵" icon={Users} change="۱.۵٪- از ماه گذشته" changeType="negative" />
+        <StatCard title="مشترکین" value="۱٬۲۰۴" icon={Mail} change="۱۰۰+ در این هفته" changeType="positive" />
+        <StatCard title="آیتم برتر" value="کارامل ماکیاتو" icon={TrendingUp} change="فروش ۱۲۰ واحد" />
       </div>
 
-      <div className="mb-6 flex space-x-2">
-        <Button variant="default"><PlusCircle className="mr-2 h-4 w-4" /> New Order</Button>
-        <Button variant="outline"><Coffee className="mr-2 h-4 w-4" /> Add Menu Item</Button>
-        <Button variant="outline"><Package className="mr-2 h-4 w-4" /> Add Product</Button>
-        <Button variant="outline"><Settings className="mr-2 h-4 w-4" /> Site Settings</Button>
+      <div className="mb-6 flex space-x-2 flex-wrap gap-2">
+        <Button variant="default"><PlusCircle className="ms-2 h-4 w-4" /> سفارش جدید</Button>
+        <Button variant="outline"><Coffee className="ms-2 h-4 w-4" /> افزودن آیتم منو</Button>
+        <Button variant="outline"><Package className="ms-2 h-4 w-4" /> افزودن محصول</Button>
+        <Button variant="outline"><Settings className="ms-2 h-4 w-4" /> تنظیمات سایت</Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates and actions across the platform.</CardDescription>
+            <CardTitle>فعالیت‌های اخیر</CardTitle>
+            <CardDescription>آخرین به‌روزرسانی‌ها و اقدامات در سراسر پلتفرم.</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
               {recentActivities.map((activity) => (
-                <li key={activity.id} className="flex items-start space-x-3">
+                <li key={activity.id} className="flex items-start space-x-reverse space-x-3">
                   <Avatar className="h-10 w-10 border">
                     <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar" />
                     <AvatarFallback>{activity.avatar}</AvatarFallback>
@@ -104,16 +103,16 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Selling Items</CardTitle>
-            <CardDescription>Most popular items by sales or revenue.</CardDescription>
+            <CardTitle>آیتم‌های پرفروش</CardTitle>
+            <CardDescription>محبوب‌ترین آیتم‌ها بر اساس فروش یا درآمد.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Sales</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead>آیتم</TableHead>
+                  <TableHead>فروش</TableHead>
+                  <TableHead className="text-left">درآمد</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -124,7 +123,7 @@ export default function DashboardPage() {
                       <div className="text-xs text-muted-foreground">{item.category}</div>
                     </TableCell>
                     <TableCell>{item.sales}</TableCell>
-                    <TableCell className="text-right">{item.revenue}</TableCell>
+                    <TableCell className="text-left">{item.revenue}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

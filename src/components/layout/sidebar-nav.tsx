@@ -19,9 +19,10 @@ import {
   Settings2,
   UserCog,
   UserCircle2,
-  ChevronRight,
+  ChevronLeft, // Changed for RTL
   Home,
   Info,
+  Package, // Added for Merchandise if we bring it back
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+
 export interface NavItem {
   title: string;
   href: string;
@@ -47,39 +49,40 @@ export interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
-  { title: "Menu", href: "/dashboard/menu", icon: ListOrdered },
-  { title: "Customers", href: "/dashboard/customers", icon: Users },
+  { title: "داشبورد", href: "/dashboard", icon: LayoutDashboard },
+  { title: "سفارشات", href: "/dashboard/orders", icon: ShoppingCart },
+  { title: "منو", href: "/dashboard/menu", icon: ListOrdered },
+  { title: "مشتریان", href: "/dashboard/customers", icon: Users },
+  { title: "کالاها", href: "/dashboard/merchandise", icon: Package }, // Kept, just in case
   {
-    title: "CMS",
+    title: "مدیریت محتوا",
     href: "/dashboard/cms",
     icon: LayoutPanelLeft,
     items: [
-      { title: "Home Page", href: "/dashboard/cms/home", icon: Home },
-      { title: "About Page", href: "/dashboard/cms/about", icon: Info },
-      { title: "Contact Page", href: "/dashboard/cms/contact", icon: Contact },
-      { title: "Privacy Policy", href: "/dashboard/cms/privacy", icon: ShieldCheck },
-      { title: "Terms of Service", href: "/dashboard/cms/terms", icon: FileLock2 },
+      { title: "صفحه اصلی", href: "/dashboard/cms/home", icon: Home },
+      { title: "درباره ما", href: "/dashboard/cms/about", icon: Info },
+      { title: "تماس با ما", href: "/dashboard/cms/contact", icon: Contact },
+      { title: "سیاست حفظ حریم خصوصی", href: "/dashboard/cms/privacy", icon: ShieldCheck },
+      { title: "شرایط خدمات", href: "/dashboard/cms/terms", icon: FileLock2 },
     ],
   },
   {
-    title: "Marketing",
+    title: "بازاریابی",
     href: "/dashboard/marketing",
     icon: PercentSquare,
     items: [
-      { title: "Discount Codes", href: "/dashboard/marketing/discounts", icon: PercentSquare },
-      { title: "Newsletter", href: "/dashboard/marketing/newsletter", icon: Mail },
+      { title: "کدهای تخفیف", href: "/dashboard/marketing/discounts", icon: PercentSquare },
+      { title: "خبرنامه", href: "/dashboard/marketing/newsletter", icon: Mail },
     ],
   },
-  { title: "Settings", href: "/dashboard/settings", icon: Settings2 },
+  { title: "تنظیمات", href: "/dashboard/settings", icon: Settings2 },
   {
-    title: "Administration",
+    title: "مدیریت سیستم",
     href: "/dashboard/admin",
     icon: UserCog,
     items: [
-      { title: "My Profile", href: "/dashboard/admin/profile", icon: UserCircle2 },
-      { title: "Admin Users", href: "/dashboard/admin/users", icon: Users },
+      { title: "پروفایل من", href: "/dashboard/admin/profile", icon: UserCircle2 },
+      { title: "کاربران ادمین", href: "/dashboard/admin/users", icon: Users },
     ],
   },
 ];
@@ -104,10 +107,10 @@ export function SidebarNav() {
                   asChild={!isSubmenu && !item.items}
                 >
                    <div className="flex items-center w-full">
-                    <item.icon className="mr-2 h-4 w-4" />
+                    <item.icon className="ms-2 h-4 w-4" />
                     <span>{item.title}</span>
                    </div>
-                   <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90" />
+                   <ChevronLeft className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:-rotate-90" />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -126,7 +129,7 @@ export function SidebarNav() {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <MenuButtonComponent isActive={isActive} tooltip={item.title}>
-              <item.icon className="mr-2 h-4 w-4" />
+              <item.icon className="ms-2 h-4 w-4" />
               <span>{item.title}</span>
             </MenuButtonComponent>
           </Link>

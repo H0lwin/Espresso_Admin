@@ -16,7 +16,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -36,25 +35,31 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Edit, Trash2, Search, UserCog, Loader2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type AdminRole = "Administrator" | "Editor" | "Support";
+const adminRoleTranslations: Record<AdminRole, string> = {
+  Administrator: "مدیر کل",
+  Editor: "ویرایشگر",
+  Support: "پشتیبان",
+};
 
 interface AdminUser {
   id: string;
   name: string;
   email: string;
   role: AdminRole;
-  lastLogin: string; // ISO date string or formatted
+  lastLogin: string; 
   avatarFallback: string;
   avatarUrl?: string;
 }
 
+// Mock data translations
 const mockAdminUsers: AdminUser[] = [
-  { id: "admin001", name: "Super Admin", email: "super.admin@espressoedge.com", role: "Administrator", lastLogin: "2023-10-26T10:00:00Z", avatarFallback: "SA" },
-  { id: "admin002", name: "Content Editor", email: "editor@espressoedge.com", role: "Editor", lastLogin: "2023-10-25T14:30:00Z", avatarFallback: "CE", avatarUrl: "https://placehold.co/40x40.png" },
-  { id: "admin003", name: "Support Staff", email: "support@espressoedge.com", role: "Support", lastLogin: "2023-10-26T09:15:00Z", avatarFallback: "SS" },
+  { id: "admin001", name: "مدیر ارشد", email: "super.admin@espressoedge.com", role: "Administrator", lastLogin: "2023-10-26T10:00:00Z", avatarFallback: "ما" },
+  { id: "admin002", name: "ویرایشگر محتوا", email: "editor@espressoedge.com", role: "Editor", lastLogin: "2023-10-25T14:30:00Z", avatarFallback: "وم", avatarUrl: "https://placehold.co/40x40.png" },
+  { id: "admin003", name: "کارمند پشتیبانی", email: "support@espressoedge.com", role: "Support", lastLogin: "2023-10-26T09:15:00Z", avatarFallback: "ک‌پ" },
 ];
 
 const adminRoles: AdminRole[] = ["Administrator", "Editor", "Support"];
@@ -68,11 +73,10 @@ export default function AdminUsersPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState<AdminUser | null>(null);
 
-  // Form state
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [role, setRole] = React.useState<AdminRole>("Support");
-  const [password, setPassword] = React.useState(""); // For new users or password reset
+  const [password, setPassword] = React.useState("");
 
   const filteredAdminUsers = adminUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,19 +97,18 @@ export default function AdminUsersPage() {
     setName(user.name);
     setEmail(user.email);
     setRole(user.role);
-    setPassword(""); // Don't prefill password for editing
+    setPassword("");
     setIsFormOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
     setIsSubmitting(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setAdminUsers(prev => prev.filter(user => user.id !== userToDelete.id));
     toast({
-      title: "User Deleted",
-      description: `${userToDelete.name} has been successfully deleted.`,
+      title: "کاربر حذف شد",
+      description: `${userToDelete.name} با موفقیت حذف شد.`,
     });
     setUserToDelete(null);
     setIsSubmitting(false);
@@ -114,17 +117,16 @@ export default function AdminUsersPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const avatarFallback = name.split(" ").map(n => n[0]).join("").toUpperCase() || "AU";
+    const avatarFallback = name.split(" ").map(n => n[0]).join("").toUpperCase() || "کا";
     
     if (editingUser) {
       setAdminUsers(prev => prev.map(user =>
         user.id === editingUser.id ? { ...editingUser, name, email, role, avatarFallback } : user
       ));
-      toast({ title: "User Updated", description: `${name} has been updated.` });
-      if (password) console.log(`Password reset for ${email}`); // Handle password change
+      toast({ title: "کاربر به‌روزرسانی شد", description: `${name} به‌روزرسانی شد.` });
+      if (password) console.log(`رمز عبور برای ${email} بازنشانی شد`);
     } else {
       const newUser: AdminUser = {
         id: `admin${Date.now()}`,
@@ -135,17 +137,17 @@ export default function AdminUsersPage() {
         avatarFallback,
       };
       setAdminUsers(prev => [...prev, newUser]);
-      toast({ title: "User Added", description: `${name} has been added.` });
-      console.log(`New user created with password: ${password}`); // Handle new user password
+      toast({ title: "کاربر اضافه شد", description: `${name} اضافه شد.` });
+      console.log(`کاربر جدید با رمز عبور ایجاد شد: ${password}`);
     }
     setIsSubmitting(false);
     setIsFormOpen(false);
   };
   
   const getRowActions = (user: AdminUser): ActionItem[] => [
-    { label: "Edit User", icon: Edit, onClick: () => handleEditUser(user) },
+    { label: "ویرایش کاربر", icon: Edit, onClick: () => handleEditUser(user) },
     { label: "---" },
-    { label: "Delete User", icon: Trash2, onClick: () => setUserToDelete(user), isDestructive: true },
+    { label: "حذف کاربر", icon: Trash2, onClick: () => setUserToDelete(user), isDestructive: true },
   ];
   
   const getRoleBadgeVariant = (role: AdminRole) => {
@@ -157,21 +159,21 @@ export default function AdminUsersPage() {
   return (
     <>
       <PageHeader
-        title="Admin Users Management"
-        description="Manage administrator accounts and their roles."
+        title="مدیریت کاربران ادمین"
+        description="حساب‌های مدیران و نقش‌های آن‌ها را مدیریت کنید."
         actions={
           <Button onClick={handleAddNewUser} disabled={isSubmitting}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Admin User
+            <PlusCircle className="ms-2 h-4 w-4" /> افزودن کاربر ادمین جدید
           </Button>
         }
       />
       <div className="mb-4">
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search users by name or email..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجوی کاربران بر اساس نام یا ایمیل..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -182,11 +184,11 @@ export default function AdminUsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Last Login</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>کاربر</TableHead>
+              <TableHead>ایمیل</TableHead>
+              <TableHead>نقش</TableHead>
+              <TableHead>آخرین ورود</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -202,9 +204,9 @@ export default function AdminUsersPage() {
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell><Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge></TableCell>
-                <TableCell>{new Date(user.lastLogin).toLocaleString()}</TableCell>
-                <TableCell className="text-right">
+                <TableCell><Badge variant={getRoleBadgeVariant(user.role)}>{adminRoleTranslations[user.role]}</Badge></TableCell>
+                <TableCell>{new Date(user.lastLogin).toLocaleString('fa-IR')}</TableCell>
+                <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(user)} />
                 </TableCell>
               </TableRow>
@@ -214,62 +216,61 @@ export default function AdminUsersPage() {
       </div>
       {filteredAdminUsers.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No admin users found.
+            کاربر ادمینی یافت نشد.
         </div>
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isSubmitting && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit Admin User" : "Add New Admin User"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingUser ? "ویرایش کاربر ادمین" : "افزودن کاربر ادمین جدید"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
             <div>
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">نام کامل</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">آدرس ایمیل</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">نقش</Label>
               <Select value={role} onValueChange={(v) => setRole(v as AdminRole)} disabled={isSubmitting}>
                 <SelectTrigger id="role"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {adminRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {adminRoles.map(r => <SelectItem key={r} value={r}>{adminRoleTranslations[r]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="password">{editingUser ? "New Password (leave blank to keep current)" : "Password"}</Label>
+              <Label htmlFor="password">{editingUser ? "رمز عبور جدید (برای حفظ رمز فعلی خالی بگذارید)" : "رمز عبور"}</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!editingUser} disabled={isSubmitting} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingUser ? "Save Changes" : "Add User"}
+                {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                {editingUser ? "ذخیره تغییرات" : "افزودن کاربر"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogHeader className="text-right">
+            <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will permanently delete the admin user {userToDelete?.name}. This cannot be undone.
+              این اقدام کاربر ادمین {userToDelete?.name} را برای همیشه حذف خواهد کرد. این عمل قابل بازگشت نیست.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} disabled={isSubmitting} className={buttonVariants({variant: "destructive"})}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete User
+              {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+              حذف کاربر
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -277,5 +278,3 @@ export default function AdminUsersPage() {
     </>
   );
 }
-
-    

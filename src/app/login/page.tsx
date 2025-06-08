@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -22,8 +23,8 @@ import { Logo } from "@/components/shared/logo";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const loginFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  email: z.string().email({ message: "لطفا یک آدرس ایمیل معتبر وارد کنید." }),
+  password: z.string().min(6, { message: "رمز عبور باید حداقل ۶ کاراکتر باشد." }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
@@ -56,9 +57,9 @@ export default function LoginPage() {
         <Logo size="lg" />
       </div>
       <Card className="w-full max-w-sm shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-headline">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
+        <CardHeader className="text-right">
+          <CardTitle className="text-2xl font-headline">ورود ادمین</CardTitle>
+          <CardDescription>برای دسترسی به داشبورد، اطلاعات خود را وارد کنید.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -68,7 +69,7 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>ایمیل</FormLabel>
                     <FormControl>
                       <Input placeholder="admin@espressoedge.com" {...field} />
                     </FormControl>
@@ -81,7 +82,7 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>رمز عبور</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input 
@@ -93,11 +94,11 @@ export default function LoginPage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                          <span className="sr-only">{showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}</span>
                         </Button>
                       </div>
                     </FormControl>
@@ -106,20 +107,20 @@ export default function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign In
+                {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                ورود
               </Button>
             </form>
           </Form>
           <div className="mt-6 text-center text-sm">
             <Link href="#" className="text-primary hover:underline">
-              Forgot password?
+              رمز عبور را فراموش کرده‌اید؟
             </Link>
           </div>
         </CardContent>
       </Card>
       <p className="mt-8 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} Espresso Edge. All rights reserved.
+        &copy; {new Date().getFullYear()} اسپرسو اِج. تمام حقوق محفوظ است.
       </p>
     </div>
   );

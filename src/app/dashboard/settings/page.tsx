@@ -27,9 +27,9 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = React.useState(false);
 
   const [socialLinks, setSocialLinks] = React.useState<SocialLink[]>([
-    { id: "sl1", platform: "Facebook", url: "https://facebook.com/espressoedge" },
-    { id: "sl2", platform: "Instagram", url: "https://instagram.com/espressoedge" },
-    { id: "sl3", platform: "Twitter", url: "https://twitter.com/espressoedge" },
+    { id: "sl1", platform: "فیسبوک", url: "https://facebook.com/espressoedge" },
+    { id: "sl2", platform: "اینستاگرام", url: "https://instagram.com/espressoedge" },
+    { id: "sl3", platform: "توییتر", url: "https://twitter.com/espressoedge" },
   ]);
   
   const handleSocialLinkChange = (index: number, field: keyof SocialLink, value: string) => {
@@ -48,13 +48,12 @@ export default function SettingsPage() {
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    console.log("Saving Settings:", { socialLinks });
+    console.log("ذخیره تنظیمات:", { socialLinks });
     toast({
-      title: "Settings Saved",
-      description: "Your site settings have been successfully updated.",
+      title: "تنظیمات ذخیره شد",
+      description: "تنظیمات سایت شما با موفقیت به‌روزرسانی شد.",
     });
     setIsSaving(false);
   };
@@ -62,31 +61,30 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader
-        title="Site Settings"
-        description="Configure general settings for your website and store."
+        title="تنظیمات سایت"
+        description="تنظیمات عمومی وب‌سایت و فروشگاه خود را پیکربندی کنید."
         actions={
           <Button onClick={handleSaveChanges} disabled={isSaving}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            {isSaving ? "Saving..." : "Save All Changes"}
+            {isSaving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
+            {isSaving ? "در حال ذخیره..." : "ذخیره تمام تغییرات"}
           </Button>
         }
       />
 
       <Accordion type="multiple" defaultValue={["social"]} className="w-full space-y-4">
-        {/* Social Links Section */}
         <AccordionItem value="social">
-          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline"><LinkIcon className="inline mr-2 h-5 w-5" /> Social Media Links</AccordionTrigger>
+          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline"><LinkIcon className="inline ms-2 h-5 w-5" /> لینک‌های شبکه‌های اجتماعی</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="space-y-4">
               {socialLinks.map((link, index) => (
                 <div key={link.id} className="grid grid-cols-1 md:grid-cols-3 items-end gap-2 p-3 border rounded-md bg-muted/30">
                   <div className="space-y-1">
-                    <Label htmlFor={`platform-${link.id}`}>Platform</Label>
+                    <Label htmlFor={`platform-${link.id}`}>پلتفرم</Label>
                     <Input 
                       id={`platform-${link.id}`} 
                       value={link.platform} 
                       onChange={(e) => handleSocialLinkChange(index, 'platform', e.target.value)}
-                      placeholder="e.g., Facebook"
+                      placeholder="مثلا فیسبوک"
                       disabled={isSaving}
                     />
                   </div>
@@ -103,13 +101,13 @@ export default function SettingsPage() {
                     />
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeSocialLink(link.id)} disabled={isSaving}>
                         <Trash2 className="h-4 w-4 text-destructive" />
-                        <span className="sr-only">Remove link</span>
+                        <span className="sr-only">حذف لینک</span>
                     </Button>
                     </div>
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addSocialLink} disabled={isSaving}>Add Social Link</Button>
+              <Button type="button" variant="outline" onClick={addSocialLink} disabled={isSaving}>افزودن لینک شبکه اجتماعی</Button>
             </div>
           </AccordionContent>
         </AccordionItem>

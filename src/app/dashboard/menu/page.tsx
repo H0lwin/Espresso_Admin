@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
-import { PlusCircle, Search, Edit, Trash2, Eye, UploadCloud, Loader2 } from "lucide-react";
+import { PlusCircle, Search, Edit, Trash2, UploadCloud, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
@@ -43,26 +43,31 @@ interface MenuItem {
   imageFile?: File | null;
 }
 
+// Mock data translations
 const mockMenuItems: MenuItem[] = [
-  { id: "menu001", name: "Espresso", category: "Coffee", price: 3.50, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "Rich and intense single shot espresso." },
-  { id: "menu002", name: "Caramel Macchiato", category: "Coffee", price: 5.25, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "Espresso with vanilla syrup, steamed milk, and caramel sauce." },
-  { id: "menu003", name: "Croissant", category: "Pastries", price: 3.00, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "Buttery and flaky French croissant." },
-  { id: "menu004", name: "Avocado Toast", category: "Food", price: 8.50, imageUrl: "https://placehold.co/80x80.png", status: "Unavailable", description: "Smashed avocado on toasted sourdough with seasoning." },
-  { id: "menu005", name: "Seasonal Fruit Tart", category: "Desserts", price: 6.00, imageUrl: "https://placehold.co/80x80.png", status: "Draft", description: "Sweet pastry crust with creamy custard and fresh seasonal fruits." },
+  { id: "menu001", name: "اسپرسو", category: "قهوه", price: 35000, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "اسپرسو تک شات غنی و قوی." },
+  { id: "menu002", name: "کارامل ماکیاتو", category: "قهوه", price: 52500, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "اسپرسو با سیروپ وانیل، شیر بخار داده شده و سس کارامل." },
+  { id: "menu003", name: "کروسان", category: "شیرینی‌جات", price: 30000, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "کروسان فرانسوی کره‌ای و لایه‌ای." },
+  { id: "menu004", name: "تست آووکادو", category: "غذا", price: 85000, imageUrl: "https://placehold.co/80x80.png", status: "Unavailable", description: "آووکادو له شده روی نان تست سبوس‌دار با چاشنی." },
+  { id: "menu005", name: "تارت میوه فصل", category: "دسرها", price: 60000, imageUrl: "https://placehold.co/80x80.png", status: "Draft", description: "خمیر شیرینی شیرین با کاستارد خامه‌ای و میوه‌های تازه فصل." },
 ];
 
-const categories = ["All", "Coffee", "Tea", "Pastries", "Food", "Desserts", "Drinks"];
+const categories = ["همه", "قهوه", "چای", "شیرینی‌جات", "غذا", "دسرها", "نوشیدنی‌ها"];
+const itemStatusTranslations: Record<ItemStatus, string> = {
+  Available: "موجود",
+  Unavailable: "ناموجود",
+  Draft: "پیش‌نویس",
+};
 
 export default function MenuPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [categoryFilter, setCategoryFilter] = React.useState("All");
+  const [categoryFilter, setCategoryFilter] = React.useState("همه");
   const [menuItems, setMenuItems] = React.useState<MenuItem[]>(mockMenuItems);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<MenuItem | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Form state
   const [itemName, setItemName] = React.useState("");
   const [itemCategory, setItemCategory] = React.useState("");
   const [itemPrice, setItemPrice] = React.useState("");
@@ -71,10 +76,9 @@ export default function MenuPage() {
   const [itemImagePreview, setItemImagePreview] = React.useState<string | null>(null);
   const [itemImageFile, setItemImageFile] = React.useState<File | null>(null);
 
-
   const filteredMenuItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "All" || item.category === categoryFilter;
+    const matchesCategory = categoryFilter === "همه" || item.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -103,11 +107,11 @@ export default function MenuPage() {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
+    if (window.confirm("آیا از حذف این آیتم مطمئن هستید؟")) {
       setMenuItems(prevItems => prevItems.filter(item => item.id !== itemId));
       toast({
-        title: "Item Deleted",
-        description: "The menu item has been removed.",
+        title: "آیتم حذف شد",
+        description: "آیتم منو حذف گردید.",
       });
     }
   };
@@ -115,8 +119,6 @@ export default function MenuPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newItemData: Omit<MenuItem, 'id' | 'imageUrl'> & { id?: string, imageUrl?: string, imageFile?: File | null } = {
@@ -134,8 +136,8 @@ export default function MenuPage() {
         prevItems.map(item => item.id === editingItem.id ? { ...editingItem, ...newItemData, id: editingItem.id, imageUrl: itemImagePreview || editingItem.imageUrl } : item)
       );
       toast({
-        title: "Item Updated",
-        description: `${itemName} has been successfully updated.`,
+        title: "آیتم به‌روزرسانی شد",
+        description: `${itemName} با موفقیت به‌روزرسانی شد.`,
       });
     } else {
       setMenuItems(prevItems => [
@@ -143,8 +145,8 @@ export default function MenuPage() {
         { ...newItemData, id: `menu${Date.now()}`, imageUrl: itemImagePreview || "https://placehold.co/80x80.png" } as MenuItem,
       ]);
       toast({
-        title: "Item Added",
-        description: `${itemName} has been successfully added to the menu.`,
+        title: "آیتم اضافه شد",
+        description: `${itemName} با موفقیت به منو اضافه شد.`,
       });
     }
     setIsLoading(false);
@@ -164,9 +166,9 @@ export default function MenuPage() {
   };
 
   const getRowActions = (item: MenuItem): ActionItem[] => [
-    { label: "Edit Item", icon: Edit, onClick: () => handleEditItem(item) },
+    { label: "ویرایش آیتم", icon: Edit, onClick: () => handleEditItem(item) },
     { label: "---" },
-    { label: "Delete Item", icon: Trash2, onClick: () => handleDeleteItem(item.id), isDestructive: true },
+    { label: "حذف آیتم", icon: Trash2, onClick: () => handleDeleteItem(item.id), isDestructive: true },
   ];
 
   const getStatusBadgeVariant = (status: ItemStatus) => {
@@ -181,22 +183,22 @@ export default function MenuPage() {
   return (
     <>
       <PageHeader
-        title="Menu Management"
-        description="Manage your food and drink offerings."
+        title="مدیریت منو"
+        description="پیشنهادات غذایی و نوشیدنی خود را مدیریت کنید."
         actions={
           <Button onClick={handleAddNewItem} disabled={isLoading}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Item
+            <PlusCircle className="ms-2 h-4 w-4" /> افزودن آیتم جدید
           </Button>
         }
       />
 
       <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1 w-full md:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search menu items..."
-            className="pl-8 w-full md:w-[300px]"
+            placeholder="جستجوی آیتم‌های منو..."
+            className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={isLoading}
@@ -204,7 +206,7 @@ export default function MenuPage() {
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoading}>
           <SelectTrigger className="w-full md:w-[180px]">
-            <SelectValue placeholder="Filter by category" />
+            <SelectValue placeholder="فیلتر بر اساس دسته‌بندی" />
           </SelectTrigger>
           <SelectContent>
             {categories.map(cat => (
@@ -218,12 +220,12 @@ export default function MenuPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="w-[80px]">تصویر</TableHead>
+              <TableHead>نام</TableHead>
+              <TableHead>دسته‌بندی</TableHead>
+              <TableHead>قیمت</TableHead>
+              <TableHead>وضعیت</TableHead>
+              <TableHead className="text-left">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -241,11 +243,11 @@ export default function MenuPage() {
                 </TableCell>
                 <TableCell className="font-medium">{item.name}</TableCell>
                 <TableCell>{item.category}</TableCell>
-                <TableCell>${item.price.toFixed(2)}</TableCell>
+                <TableCell>{item.price.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadgeVariant(item.status)}>{item.status}</Badge>
+                  <Badge variant={getStatusBadgeVariant(item.status)}>{itemStatusTranslations[item.status]}</Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(item)} />
                 </TableCell>
               </TableRow>
@@ -255,32 +257,32 @@ export default function MenuPage() {
       </div>
        {filteredMenuItems.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-            No menu items found matching your criteria.
+            هیچ آیتم منویی با معیارهای شما یافت نشد.
         </div>
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isLoading && setIsFormOpen(open)}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Menu Item" : "Add New Menu Item"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingItem ? "ویرایش آیتم منو" : "افزودن آیتم جدید به منو"}</DialogTitle>
             <DialogDescription>
-              {editingItem ? "Update the details of this menu item." : "Fill in the details for the new menu item."}
+              {editingItem ? "جزئیات این آیتم منو را به‌روزرسانی کنید." : "جزئیات آیتم جدید منو را پر کنید."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="grid gap-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="itemName">Name</Label>
-                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="e.g., Classic Latte" required disabled={isLoading} />
+                <Label htmlFor="itemName">نام</Label>
+                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="مثلا کلاسیک لاته" required disabled={isLoading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="itemCategory">Category</Label>
+                <Label htmlFor="itemCategory">دسته‌بندی</Label>
                 <Select value={itemCategory} onValueChange={setItemCategory} required disabled={isLoading}>
                   <SelectTrigger id="itemCategory">
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="انتخاب دسته‌بندی" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.filter(c => c !== "All").map(cat => (
+                    {categories.filter(c => c !== "همه").map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
                   </SelectContent>
@@ -290,48 +292,48 @@ export default function MenuPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="itemPrice">Price</Label>
-                <Input id="itemPrice" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} placeholder="e.g., 4.50" step="0.01" required disabled={isLoading} />
+                <Label htmlFor="itemPrice">قیمت (تومان)</Label>
+                <Input id="itemPrice" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} placeholder="مثلا ۴۵۰۰۰" step="1000" required disabled={isLoading} />
               </div>
                <div className="space-y-2">
-                <Label htmlFor="itemStatus">Status</Label>
+                <Label htmlFor="itemStatus">وضعیت</Label>
                 <Select value={itemStatus} onValueChange={(val) => setItemStatus(val as ItemStatus)} required disabled={isLoading}>
                   <SelectTrigger id="itemStatus">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="انتخاب وضعیت" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Unavailable">Unavailable</SelectItem>
-                    <SelectItem value="Draft">Draft</SelectItem>
+                    {Object.entries(itemStatusTranslations).map(([key, value]) => (
+                        <SelectItem key={key} value={key}>{value}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="itemDescription">Description (Optional)</Label>
-              <Textarea id="itemDescription" value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="Short description of the item..." disabled={isLoading} />
+              <Label htmlFor="itemDescription">توضیحات (اختیاری)</Label>
+              <Textarea id="itemDescription" value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} placeholder="توضیح مختصری از آیتم..." disabled={isLoading} />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="itemImage">Image</Label>
+              <Label htmlFor="itemImage">تصویر</Label>
               <div className="flex items-center gap-4">
                 {itemImagePreview && (
-                  <Image src={itemImagePreview} alt="Preview" width={80} height={80} className="rounded-md object-cover" data-ai-hint="item preview" />
+                  <Image src={itemImagePreview} alt="پیش‌نمایش" width={80} height={80} className="rounded-md object-cover" data-ai-hint="item preview" />
                 )}
                 <Input id="itemImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
                 <Button type="button" variant="outline" onClick={() => document.getElementById('itemImage')?.click()} disabled={isLoading}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> {itemImagePreview && !itemImageFile ? "Change Image" : "Upload Image"}
+                  <UploadCloud className="ms-2 h-4 w-4" /> {itemImagePreview && !itemImageFile ? "تغییر تصویر" : "بارگذاری تصویر"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Recommended size: 200x200px. Max 1MB.</p>
+              <p className="text-xs text-muted-foreground">اندازه پیشنهادی: ۲۰۰×۲۰۰ پیکسل. حداکثر ۱ مگابایت.</p>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingItem ? "Save Changes" : "Add Item"}
+                {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+                {editingItem ? "ذخیره تغییرات" : "افزودن آیتم"}
               </Button>
             </DialogFooter>
           </form>
@@ -340,5 +342,3 @@ export default function MenuPage() {
     </>
   );
 }
-
-    
