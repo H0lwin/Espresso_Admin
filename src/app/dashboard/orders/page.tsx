@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -26,7 +27,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetFooter,
   SheetClose
 } from "@/components/ui/sheet";
@@ -229,12 +229,10 @@ export default function OrdersPage() {
                 </TableCell>
                 <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
                 <TableCell className="text-right">
-                  <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)}>
-                      <Eye className="h-4 w-4" />
-                       <span className="sr-only">View Details</span>
-                    </Button>
-                  </SheetTrigger>
+                  <Button variant="ghost" size="icon" onClick={() => handleViewDetails(order)}>
+                    <Eye className="h-4 w-4" />
+                     <span className="sr-only">View Details</span>
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
@@ -349,3 +347,6 @@ export default function OrdersPage() {
     </>
   );
 }
+
+
+    
