@@ -16,7 +16,6 @@ import {
   PlusCircle,
   Settings,
   Coffee,
-  Truck,
   Package,
 } from "lucide-react";
 import {
@@ -37,7 +36,7 @@ const recentActivities = [
 ];
 
 const topItems = [
-  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷٬۲۰۰٬۰۰۰ ریال" }, // Adjusted revenue for clarity in Persian
+  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷٬۲۰۰٬۰۰۰ ریال" },
   { id: 2, name: "ماگ اسپرسو اج", category: "کالاها", sales: 85, revenue: "۱۲٬۷۵۰٬۰۰۰ ریال" },
   { id: 3, name: "کروسان", category: "خوراکی", sales: 250, revenue: "۸٬۷۵۰٬۰۰۰ ریال" },
   { id: 4, name: "دانه قهوه (۱ کیلوگرم)", category: "کالاها", sales: 60, revenue: "۱۵٬۰۰۰٬۰۰۰ ریال" },
@@ -47,10 +46,10 @@ const topItems = [
 const getIconForActivity = (type: string) => {
   switch (type) {
     case 'order': return <ShoppingCart className="h-4 w-4 text-primary" />;
-    case 'user': return <Users className="h-4 w-4 text-blue-500" />;
-    case 'menu': return <Coffee className="h-4 w-4 text-yellow-600" />;
-    case 'review': return <TrendingUp className="h-4 w-4 text-green-500" />;
-    default: return <Package className="h-4 w-4 text-gray-500" />;
+    case 'user': return <Users className="h-4 w-4 text-blue-500" />; // Consider theme colors
+    case 'menu': return <Coffee className="h-4 w-4 text-yellow-600" />; // Consider theme colors
+    case 'review': return <TrendingUp className="h-4 w-4 text-green-500" />; // Consider theme colors
+    default: return <Package className="h-4 w-4 text-gray-500" />; // Consider theme colors
   }
 };
 
@@ -106,6 +105,7 @@ export default function DashboardPage() {
             <CardDescription>محبوب‌ترین آیتم‌ها بر اساس فروش یا درآمد.</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* The Table component already wraps its content in a div with overflow-auto */}
             <Table>
               <TableHeader>
                 <TableRow>

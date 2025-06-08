@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,11 @@ import { DataTableActions, type ActionItem } from "@/components/shared/data-tabl
 import { PlusCircle, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'مدیریت کاربران ادمین - پنل مدیریت اسپرسو اِج',
+// };
+
 type AdminRole = "Administrator" | "Editor" | "Support";
 const adminRoleTranslations: Record<AdminRole, string> = {
   Administrator: "مدیر کل",
@@ -55,7 +61,6 @@ interface AdminUser {
   avatarUrl?: string;
 }
 
-// Mock data translations
 const mockAdminUsers: AdminUser[] = [
   { id: "admin001", name: "مدیر ارشد", email: "super.admin@espressoedge.com", role: "Administrator", lastLogin: "2023-10-26T10:00:00Z", avatarFallback: "ما" },
   { id: "admin002", name: "ویرایشگر محتوا", email: "editor@espressoedge.com", role: "Editor", lastLogin: "2023-10-25T14:30:00Z", avatarFallback: "وم", avatarUrl: "https://placehold.co/40x40.png" },
@@ -168,19 +173,19 @@ export default function AdminUsersPage() {
         }
       />
       <div className="mb-4">
-        <div className="relative">
+        <div className="relative w-full md:w-[300px]">
           <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="جستجوی کاربران بر اساس نام یا ایمیل..."
-            className="pr-8 w-full md:w-[300px]"
+            className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -225,7 +230,7 @@ export default function AdminUsersPage() {
           <DialogHeader className="text-right">
             <DialogTitle>{editingUser ? "ویرایش کاربر ادمین" : "افزودن کاربر ادمین جدید"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
             <div>
               <Label htmlFor="name">نام کامل</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={isSubmitting} />
@@ -247,31 +252,31 @@ export default function AdminUsersPage() {
               <Label htmlFor="password">{editingUser ? "رمز عبور جدید (برای حفظ رمز فعلی خالی بگذارید)" : "رمز عبور"}</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!editingUser} disabled={isSubmitting} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
+            <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingUser ? "ذخیره تغییرات" : "افزودن کاربر"}
               </Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader className="text-right">
+        <AlertDialogContent className="text-right">
+          <AlertDialogHeader>
             <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
             <AlertDialogDescription>
               این اقدام کاربر ادمین {userToDelete?.name} را برای همیشه حذف خواهد کرد. این عمل قابل بازگشت نیست.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
+          <AlertDialogFooter className="sm:justify-start">
             <AlertDialogAction onClick={handleDeleteConfirm} disabled={isSubmitting} className={buttonVariants({variant: "destructive"})}>
               {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
               حذف کاربر
             </AlertDialogAction>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

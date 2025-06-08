@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,12 @@ import { Calendar as CalendarIcon } from "lucide-react"
 import { format, addDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
-import { faIR } from "date-fns/locale"; // For Persian calendar
+import { faIR } from "date-fns/locale"; 
+
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'کدهای تخفیف - پنل مدیریت اسپرسو اِج',
+// };
 
 type DiscountType = "Percentage" | "Fixed Amount";
 type DiscountStatus = "Active" | "Inactive" | "Expired";
@@ -49,7 +55,6 @@ interface DiscountCode {
   timesUsed?: number;
 }
 
-// Mock data translations
 const mockDiscounts: DiscountCode[] = [
   { id: "disc001", code: "WELCOME10", type: "Percentage", value: 10, startDate: new Date(2023, 0, 1), endDate: new Date(2024, 11, 31), status: "Active", usageLimit: 1000, timesUsed: 150 },
   { id: "disc002", code: "SUMMER5OFF", type: "Fixed Amount", value: 50000, startDate: new Date(2023, 5, 1), endDate: new Date(2023, 7, 31), status: "Expired", usageLimit: 500, timesUsed: 480 },
@@ -179,12 +184,12 @@ export default function DiscountCodesPage() {
         }
       />
       <div className="mb-4">
-        <div className="relative">
+        <div className="relative w-full md:w-[300px]">
           <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="جستجوی کدهای تخفیف..."
-            className="pr-8 w-full md:w-[300px]"
+            className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             disabled={isLoading}
@@ -192,7 +197,7 @@ export default function DiscountCodesPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -235,12 +240,12 @@ export default function DiscountCodesPage() {
           <DialogHeader className="text-right">
             <DialogTitle>{editingDiscount ? "ویرایش کد تخفیف" : "ایجاد کد تخفیف جدید"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
             <div>
               <Label htmlFor="code">کد تخفیف</Label>
               <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلا SAVE10" required disabled={isLoading} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="type">نوع</Label>
                 <Select value={type} onValueChange={(v) => setType(v as DiscountType)} disabled={isLoading}>
@@ -273,7 +278,7 @@ export default function DiscountCodesPage() {
                     ) : (
                       <span>انتخاب بازه تاریخی</span>
                     )}
-                    <CalendarIcon className="me-auto h-4 w-4" /> {/* me-auto for RTL */}
+                    <CalendarIcon className="me-auto h-4 w-4" /> 
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -289,12 +294,12 @@ export default function DiscountCodesPage() {
               <Switch id="isActive" checked={isActive} onCheckedChange={setIsActive} disabled={isLoading} />
               <Label htmlFor="isActive">فعال</Label>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
+            <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingDiscount ? "ذخیره تغییرات" : "ایجاد کد"}
               </Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
             </DialogFooter>
           </form>
         </DialogContent>

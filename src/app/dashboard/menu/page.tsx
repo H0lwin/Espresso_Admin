@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import Image from "next/image";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,11 @@ import { PlusCircle, Search, Edit, Trash2, UploadCloud, Loader2 } from "lucide-r
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'مدیریت منو - پنل مدیریت اسپرسو اِج',
+// };
+
 type ItemStatus = "Available" | "Unavailable" | "Draft";
 interface MenuItem {
   id: string;
@@ -43,7 +49,6 @@ interface MenuItem {
   imageFile?: File | null;
 }
 
-// Mock data translations
 const mockMenuItems: MenuItem[] = [
   { id: "menu001", name: "اسپرسو", category: "قهوه", price: 35000, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "اسپرسو تک شات غنی و قوی." },
   { id: "menu002", name: "کارامل ماکیاتو", category: "قهوه", price: 52500, imageUrl: "https://placehold.co/80x80.png", status: "Available", description: "اسپرسو با سیروپ وانیل، شیر بخار داده شده و سس کارامل." },
@@ -216,7 +221,7 @@ export default function MenuPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -269,7 +274,7 @@ export default function MenuPage() {
               {editingItem ? "جزئیات این آیتم منو را به‌روزرسانی کنید." : "جزئیات آیتم جدید منو را پر کنید."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="grid gap-6 py-4">
+          <form onSubmit={handleFormSubmit} className="grid gap-6 py-4 text-right">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="itemName">نام</Label>
@@ -321,20 +326,20 @@ export default function MenuPage() {
                 {itemImagePreview && (
                   <Image src={itemImagePreview} alt="پیش‌نمایش" width={80} height={80} className="rounded-md object-cover" data-ai-hint="item preview" />
                 )}
-                <Input id="itemImage" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
-                <Button type="button" variant="outline" onClick={() => document.getElementById('itemImage')?.click()} disabled={isLoading}>
+                <Input id="itemImageUploadInput" type="file" onChange={handleImageUpload} accept="image/*" className="hidden" disabled={isLoading} />
+                <Button type="button" variant="outline" onClick={() => document.getElementById('itemImageUploadInput')?.click()} disabled={isLoading}>
                   <UploadCloud className="ms-2 h-4 w-4" /> {itemImagePreview && !itemImageFile ? "تغییر تصویر" : "بارگذاری تصویر"}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">اندازه پیشنهادی: ۲۰۰×۲۰۰ پیکسل. حداکثر ۱ مگابایت.</p>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
+            <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingItem ? "ذخیره تغییرات" : "افزودن آیتم"}
               </Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isLoading}>انصراف</Button>
             </DialogFooter>
           </form>
         </DialogContent>

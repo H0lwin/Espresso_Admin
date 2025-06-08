@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'مدیریت مشتریان - پنل مدیریت اسپرسو اِج',
+// };
+
 interface Customer {
   id: string;
   name: string;
@@ -59,7 +65,6 @@ interface Customer {
   isActive?: boolean;
 }
 
-// Mock data translations
 const mockCustomers: Customer[] = [
   { id: "cust001", name: "آلیس اسمیت", email: "alice.s@example.com", joinDate: "2023-01-15", orderCount: 12, totalSpent: 345000, avatarFallback: "آا", recentOrders: [{id: "سف۱۰۱", date: "2023-10-20", total: 45000, status: "تحویل شده"}], isActive: true },
   { id: "cust002", name: "باب جانسون", email: "b.johnson@example.net", joinDate: "2022-11-20", orderCount: 5, totalSpent: 120000, avatarFallback: "ب‌ج", avatarUrl: "https://placehold.co/40x40.png", recentOrders: [{id: "سف۱۰۲", date: "2023-10-15", total: 22500, status: "در حال پردازش"}], isActive: true },
@@ -188,8 +193,8 @@ export default function CustomersPage() {
         }
       />
 
-      <div className="mb-4 flex items-center gap-4">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col md:flex-row items-center gap-4">
+        <div className="relative flex-1 w-full md:w-auto">
           <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -201,7 +206,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -250,10 +255,10 @@ export default function CustomersPage() {
       )}
 
       <Sheet open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <SheetContent side="left" className="sm:max-w-lg w-[90vw] p-0"> {/* side="left" for RTL */}
+        <SheetContent side="left" className="sm:max-w-lg w-[90vw] p-0 text-right"> 
           {selectedCustomer && (
             <>
-              <SheetHeader className="p-6 border-b">
+              <SheetHeader className="p-6 border-b text-right">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
                     <AvatarImage src={selectedCustomer.avatarUrl || `https://placehold.co/64x64.png?text=${selectedCustomer.avatarFallback}`} alt={selectedCustomer.name} data-ai-hint="user avatar" />
@@ -299,8 +304,10 @@ export default function CustomersPage() {
                   )}
                 </div>
               </div>
-              <SheetFooter className="p-6 border-t flex flex-col sm:flex-row sm:justify-end sm:space-x-reverse sm:space-x-2">
-                 <Button variant="outline" onClick={() => setSelectedCustomer(null)}>بستن</Button>
+              <SheetFooter className="p-6 border-t flex flex-col sm:flex-row sm:justify-start sm:space-x-2 sm:space-x-reverse gap-2">
+                 <Button onClick={() => handleOpenEditForm(selectedCustomer)} disabled={isSubmitting}>
+                   <Edit className="ms-2 h-4 w-4" /> ویرایش مشتری
+                 </Button>
                  {selectedCustomer.isActive && (
                     <Button variant="destructive" onClick={() => { setCustomerToDeactivate(selectedCustomer); setSelectedCustomer(null); }} disabled={isSubmitting}>
                         <UserX className="ms-2 h-4 w-4" /> غیرفعال کردن
@@ -311,9 +318,7 @@ export default function CustomersPage() {
                        {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />} فعال کردن
                     </Button>
                   )}
-                 <Button onClick={() => handleOpenEditForm(selectedCustomer)} disabled={isSubmitting}>
-                   <Edit className="ms-2 h-4 w-4" /> ویرایش مشتری
-                 </Button>
+                 <Button variant="outline" onClick={() => setSelectedCustomer(null)}>بستن</Button>
               </SheetFooter>
             </>
           )}
@@ -325,7 +330,7 @@ export default function CustomersPage() {
           <DialogHeader className="text-right">
             <DialogTitle>{editingCustomer ? "ویرایش مشتری" : "افزودن مشتری جدید"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
             <div>
               <Label htmlFor="customerName">نام کامل</Label>
               <Input id="customerName" value={name} onChange={(e) => setName(e.target.value)} required disabled={isSubmitting} />
@@ -334,31 +339,31 @@ export default function CustomersPage() {
               <Label htmlFor="customerEmail">آدرس ایمیل</Label>
               <Input id="customerEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isSubmitting} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
+            <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingCustomer ? "ذخیره تغییرات" : "افزودن مشتری"}
               </Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSubmitting}>انصراف</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!customerToDeactivate} onOpenChange={(open) => !open && setCustomerToDeactivate(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader className="text-right">
+        <AlertDialogContent className="text-right">
+          <AlertDialogHeader>
             <AlertDialogTitle>آیا مطمئن هستید؟</AlertDialogTitle>
             <AlertDialogDescription>
               این اقدام کاربر {customerToDeactivate?.name} را غیرفعال خواهد کرد. او ممکن است دسترسی به برخی ویژگی‌ها را از دست بدهد.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCustomerToDeactivate(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
+          <AlertDialogFooter className="sm:justify-start">
             <AlertDialogAction onClick={handleDeactivateConfirm} disabled={isSubmitting} className={buttonVariants({variant: "destructive"})}>
               {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
               غیرفعال کردن
             </AlertDialogAction>
+            <AlertDialogCancel onClick={() => setCustomerToDeactivate(null)} disabled={isSubmitting}>انصراف</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Save, UploadCloud, KeyRound, UserCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'پروفایل من - پنل مدیریت اسپرسو اِج',
+// };
 
 export default function AdminProfilePage() {
   const { toast } = useToast();
@@ -71,15 +77,15 @@ export default function AdminProfilePage() {
         title="پروفایل من"
         description="جزئیات حساب شخصی و رمز عبور خود را مدیریت کنید."
       />
-      <form onSubmit={handleProfileUpdate}>
+      <form onSubmit={handleProfileUpdate} className="text-right">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2">
             <CardHeader className="text-right">
-              <CardTitle className="flex items-center"><UserCircle2 className="ms-2 h-5 w-5" /> اطلاعات پروفایل</CardTitle>
+              <CardTitle className="flex items-center justify-end"><UserCircle2 className="ms-2 h-5 w-5" /> اطلاعات پروفایل</CardTitle>
               <CardDescription>جزئیات شخصی خود را در اینجا به‌روزرسانی کنید.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
+              <div className="flex flex-col items-center sm:flex-row-reverse sm:items-start gap-6">
                 <div className="flex flex-col items-center space-y-2">
                   <Avatar className="h-32 w-32">
                     <AvatarImage src={avatarPreview} alt={name} data-ai-hint="admin avatar" />
@@ -106,7 +112,7 @@ export default function AdminProfilePage() {
 
           <Card>
             <CardHeader className="text-right">
-              <CardTitle className="flex items-center"><KeyRound className="ms-2 h-5 w-5" /> تغییر رمز عبور</CardTitle>
+              <CardTitle className="flex items-center justify-end"><KeyRound className="ms-2 h-5 w-5" /> تغییر رمز عبور</CardTitle>
               <CardDescription>رمز عبور حساب خود را به‌روزرسانی کنید.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -125,7 +131,7 @@ export default function AdminProfilePage() {
             </CardContent>
           </Card>
         </div>
-        <div className="mt-6 flex justify-start"> {/* justify-start for RTL */}
+        <div className="mt-6 flex justify-start"> 
           <Button type="submit" disabled={isSaving}>
             {isSaving ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Save className="ms-2 h-4 w-4" />}
             {isSaving ? "در حال ذخیره..." : "ذخیره تغییرات"}

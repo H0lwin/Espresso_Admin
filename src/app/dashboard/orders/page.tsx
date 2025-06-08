@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'مدیریت سفارشات - پنل مدیریت اسپرسو اِج',
+// };
+
 type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
 type PaymentStatus = "Paid" | "Unpaid" | "Refunded";
 
@@ -66,15 +72,14 @@ interface Order {
   items: OrderItem[];
 }
 
-// Mock data (translation of names)
 const mockOrders: Order[] = [
   {
-    id: "سف001", // ORD001
+    id: "سف001", 
     customer: { name: "آلیس نادری", email: "alice@example.com", avatar: "آن" },
     date: "2023-10-26",
-    status: "Delivered", // تحویل شده
+    status: "Delivered", 
     total: 75.50,
-    paymentStatus: "Paid", // پرداخت شده
+    paymentStatus: "Paid", 
     items: [
       { id: "item01", name: "قهوه اسپرسو (۱ کیلوگرم)", quantity: 1, price: 25.00, image: "https://placehold.co/100x100.png" },
       { id: "item02", name: "ماگ اسپرسو اج", quantity: 2, price: 15.00, image: "https://placehold.co/100x100.png" },
@@ -82,12 +87,12 @@ const mockOrders: Order[] = [
     ],
   },
   {
-    id: "سف002", // ORD002
+    id: "سف002", 
     customer: { name: "باب احمدی", email: "bob@example.com", avatar: "با" },
     date: "2023-10-25",
-    status: "Processing", // در حال پردازش
+    status: "Processing", 
     total: 42.00,
-    paymentStatus: "Paid", // پرداخت شده
+    paymentStatus: "Paid", 
     items: [
       { id: "item04", name: "عصاره کلد برو", quantity: 1, price: 18.00, image: "https://placehold.co/100x100.png" },
       { id: "item05", name: "لیوان مسافرتی", quantity: 1, price: 24.00, image: "https://placehold.co/100x100.png" },
@@ -95,7 +100,6 @@ const mockOrders: Order[] = [
   },
 ];
 
-// Translated statuses
 const orderStatusTranslations: Record<OrderStatus, string> = {
   Pending: "در انتظار",
   Processing: "در حال پردازش",
@@ -202,7 +206,7 @@ export default function OrdersPage() {
         title="مدیریت سفارشات"
         description="مشاهده، پیگیری و مدیریت تمام سفارشات مشتریان."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline">
               <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
             </Button>
@@ -237,7 +241,7 @@ export default function OrdersPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -323,16 +327,16 @@ export default function OrdersPage() {
       )}
 
       <Sheet open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <SheetContent side="left" className="sm:max-w-lg w-[90vw] p-0"> {/* side="left" for RTL */}
+        <SheetContent side="left" className="sm:max-w-lg w-[90vw] p-0"> 
           {selectedOrder && (
             <>
-              <SheetHeader className="p-6 border-b">
+              <SheetHeader className="p-6 border-b text-right">
                 <SheetTitle className="text-2xl">جزئیات سفارش: {selectedOrder.id}</SheetTitle>
                 <SheetDescription>
                   ثبت شده در {new Date(selectedOrder.date).toLocaleDateString('fa-IR')} توسط {selectedOrder.customer.name}
                 </SheetDescription>
               </SheetHeader>
-              <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+              <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] text-right">
                 <div>
                   <h3 className="text-lg font-semibold mb-2">اطلاعات مشتری</h3>
                   <div className="space-y-1 text-sm">
@@ -381,9 +385,9 @@ export default function OrdersPage() {
                   </div>
                 </div>
               </div>
-              <SheetFooter className="p-6 border-t">
-                <Button variant="outline" onClick={() => setSelectedOrder(null)}>بستن</Button>
+              <SheetFooter className="p-6 border-t flex-col sm:flex-row sm:justify-start gap-2">
                 <Button>به‌روزرسانی سفارش</Button>
+                <Button variant="outline" onClick={() => setSelectedOrder(null)}>بستن</Button>
               </SheetFooter>
             </>
           )}
@@ -396,7 +400,7 @@ export default function OrdersPage() {
             <DialogTitle>افزودن سفارش جدید</DialogTitle>
             <DialogDescription>سفارش جدید را به صورت دستی ایجاد کنید. جزئیات مشتری و آیتم‌ها را مشخص کنید.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleAddNewOrderSubmit} className="space-y-4 py-4">
+          <form onSubmit={handleAddNewOrderSubmit} className="space-y-4 py-4 text-right">
             <div>
               <Label htmlFor="newOrderCustomerName">نام مشتری</Label>
               <Input 
@@ -445,13 +449,13 @@ export default function OrdersPage() {
                 disabled={isSubmittingNewOrder}
               />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsNewOrderFormOpen(false)} disabled={isSubmittingNewOrder}>
-                انصراف
-              </Button>
+            <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isSubmittingNewOrder}>
                 {isSubmittingNewOrder && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {isSubmittingNewOrder ? "در حال ایجاد..." : "ایجاد سفارش"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsNewOrderFormOpen(false)} disabled={isSubmittingNewOrder}>
+                انصراف
               </Button>
             </DialogFooter>
           </form>

@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+// import type { Metadata } from 'next'; // Removed
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,11 @@ import {
 import { DataTableActions, type ActionItem } from "@/components/shared/data-table-actions";
 import { FileDown, Search, Trash2 } from "lucide-react";
 
+// Removed metadata export:
+// export const metadata: Metadata = {
+//   title: 'مشترکین خبرنامه - پنل مدیریت اسپرسو اِج',
+// };
+
 interface Subscriber {
   id: string;
   email: string;
@@ -23,7 +29,6 @@ interface Subscriber {
   source: string;
 }
 
-// Mock data translations
 const mockSubscribers: Subscriber[] = [
   { id: "sub001", email: "subscriber1@example.com", subscriptionDate: "2023-09-15", source: "فوتر وب‌سایت" },
   { id: "sub002", email: "coffee.lover@example.net", subscriptionDate: "2023-10-01", source: "انتخاب در پرداخت" },
@@ -45,7 +50,7 @@ export default function NewsletterPage() {
     const csvContent = filteredSubscribers.map(s =>
       `${s.id},${s.email},${s.subscriptionDate},${s.source}`
     ).join("\n");
-    const blob = new Blob(["\uFEFF" + headers + csvContent], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel UTF-8
+    const blob = new Blob(["\uFEFF" + headers + csvContent], { type: 'text/csv;charset=utf-8;' }); 
     const link = document.createElement("a");
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
@@ -81,19 +86,19 @@ export default function NewsletterPage() {
         }
       />
       <div className="mb-4">
-        <div className="relative">
+        <div className="relative w-full md:w-[300px]">
           <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="جستجو بر اساس ایمیل..."
-            className="pr-8 w-full md:w-[300px]"
+            className="pr-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
