@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -25,7 +26,7 @@ interface DataTableActionsProps {
   label?: string
 }
 
-export function DataTableActions({ actions, label = "Actions" }: DataTableActionsProps) {
+export function DataTableActions({ actions, label = "عملیات" }: DataTableActionsProps) { // Translated label
   if (!actions || actions.length === 0) {
     return null
   }
@@ -34,22 +35,22 @@ export function DataTableActions({ actions, label = "Actions" }: DataTableAction
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">باز کردن منو</span>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="start"> {/* Changed align to "start" for RTL */}
         {label && <DropdownMenuLabel>{label}</DropdownMenuLabel>}
         {actions.map((action, index) => (
           <React.Fragment key={action.label + index}>
-            {action.label === "---" ? ( // Use "---" as a convention for separator
+            {action.label === "---" ? ( 
               <DropdownMenuSeparator />
             ) : (
               <DropdownMenuItem
                 onClick={action.onClick}
-                className={action.isDestructive ? "text-destructive focus:text-destructive focus:bg-destructive/10" : ""}
+                className={action.isDestructive ? "text-destructive focus:text-destructive focus:bg-destructive/10 justify-end" : "justify-end"} // Added justify-end for RTL text
               >
-                {action.icon && <action.icon className="mr-2 h-4 w-4" />}
+                {action.icon && <action.icon className="ms-2 h-4 w-4" />} {/* Changed mr-2 to ms-2 */}
                 {action.label}
               </DropdownMenuItem>
             )}

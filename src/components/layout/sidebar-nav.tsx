@@ -19,10 +19,10 @@ import {
   Settings2,
   UserCog,
   UserCircle2,
-  ChevronLeft, // Changed for RTL
+  ChevronLeft,
   Home,
   Info,
-  Package, // Added for Merchandise if we bring it back
+  Package,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -53,7 +53,6 @@ const navItems: NavItem[] = [
   { title: "سفارشات", href: "/dashboard/orders", icon: ShoppingCart },
   { title: "منو", href: "/dashboard/menu", icon: ListOrdered },
   { title: "مشتریان", href: "/dashboard/customers", icon: Users },
-  { title: "کالاها", href: "/dashboard/merchandise", icon: Package }, // Kept, just in case
   {
     title: "مدیریت محتوا",
     href: "/dashboard/cms",

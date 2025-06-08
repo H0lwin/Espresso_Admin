@@ -9,17 +9,15 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/header";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Logo } from "@/components/shared/logo";
-import { PanelRightClose } from "lucide-react"; // Changed from PanelLeftClose for RTL
+import { PanelRightClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// This new component will be a child of SidebarProvider and can safely use useSidebar.
 function CustomSidebarHeaderContent() {
   const { state } = useSidebar();
   return (
@@ -45,7 +43,7 @@ function SidebarCollapseButton() {
       size="icon"
       onClick={toggleSidebar}
       aria-label={state === "expanded" ? "بستن نوار کناری" : "باز کردن نوار کناری"}
-      className={cn(state === "collapsed" && "rotate-180")} // Rotate still works visually
+      className={cn(state === "collapsed" && "rotate-180")}
     >
       <PanelRightClose className="h-5 w-5" />
     </Button>
@@ -72,7 +70,7 @@ export default function DashboardLayout({
       <Sidebar
         variant="sidebar" 
         collapsible="icon" 
-        side="right" // Changed to right for RTL
+        side="right"
       >
         <SidebarHeader className="p-4">
           <CustomSidebarHeaderContent />

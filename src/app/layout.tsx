@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'پنل مدیریت اسپرسو اج',
-  description: 'داشبورد مدیریت برای اسپرسو اج',
+  title: 'پنل مدیریت اسپرسو اِج',
+  description: 'داشبورد مدیریت برای اسپرسو اِج',
 };
 
 export default function RootLayout({

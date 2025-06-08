@@ -37,11 +37,11 @@ const recentActivities = [
 ];
 
 const topItems = [
-  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷۲۰٬۰۰۰ تومان" },
-  { id: 2, name: "ماگ اسپرسو اج", category: "کالاها", sales: 85, revenue: "۱٬۲۷۵٬۰۰۰ تومان" },
-  { id: 3, name: "کروسان", category: "خوراکی", sales: 250, revenue: "۸۷۵٬۰۰۰ تومان" },
-  { id: 4, name: "دانه قهوه (۱ کیلوگرم)", category: "کالاها", sales: 60, revenue: "۱٬۵۰۰٬۰۰۰ تومان" },
-  { id: 5, name: "آیس لاته", category: "نوشیدنی‌ها", sales: 150, revenue: "۷۵۰٬۰۰۰ تومان" },
+  { id: 1, name: "کارامل ماکیاتو", category: "نوشیدنی‌ها", sales: 120, revenue: "۷٬۲۰۰٬۰۰۰ ریال" }, // Adjusted revenue for clarity in Persian
+  { id: 2, name: "ماگ اسپرسو اج", category: "کالاها", sales: 85, revenue: "۱۲٬۷۵۰٬۰۰۰ ریال" },
+  { id: 3, name: "کروسان", category: "خوراکی", sales: 250, revenue: "۸٬۷۵۰٬۰۰۰ ریال" },
+  { id: 4, name: "دانه قهوه (۱ کیلوگرم)", category: "کالاها", sales: 60, revenue: "۱۵٬۰۰۰٬۰۰۰ ریال" },
+  { id: 5, name: "آیس لاته", category: "نوشیدنی‌ها", sales: 150, revenue: "۷٬۵۰۰٬۰۰۰ ریال" },
 ];
 
 const getIconForActivity = (type: string) => {
@@ -60,23 +60,22 @@ export default function DashboardPage() {
       <PageHeader title="نمای کلی داشبورد" description="خوش آمدید ادمین! آخرین وضعیت به شرح زیر است." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        <StatCard title="کل فروش" value="۱۲٬۳۴۵٬۰۰۰ تومان" icon={DollarSign} change="۵.۲٪+ از ماه گذشته" changeType="positive" />
+        <StatCard title="کل فروش" value="۱۲۳٬۴۵۰٬۰۰۰ ریال" icon={DollarSign} change="۵.۲٪+ از ماه گذشته" changeType="positive" />
         <StatCard title="کل سفارشات" value="۸۶۷" icon={ShoppingCart} change="۲.۱٪+ از ماه گذشته" changeType="positive" />
         <StatCard title="کاربران جدید" value="۴۵" icon={Users} change="۱.۵٪- از ماه گذشته" changeType="negative" />
         <StatCard title="مشترکین" value="۱٬۲۰۴" icon={Mail} change="۱۰۰+ در این هفته" changeType="positive" />
         <StatCard title="آیتم برتر" value="کارامل ماکیاتو" icon={TrendingUp} change="فروش ۱۲۰ واحد" />
       </div>
 
-      <div className="mb-6 flex space-x-2 flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         <Button variant="default"><PlusCircle className="ms-2 h-4 w-4" /> سفارش جدید</Button>
         <Button variant="outline"><Coffee className="ms-2 h-4 w-4" /> افزودن آیتم منو</Button>
-        <Button variant="outline"><Package className="ms-2 h-4 w-4" /> افزودن محصول</Button>
         <Button variant="outline"><Settings className="ms-2 h-4 w-4" /> تنظیمات سایت</Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="text-right">
             <CardTitle>فعالیت‌های اخیر</CardTitle>
             <CardDescription>آخرین به‌روزرسانی‌ها و اقدامات در سراسر پلتفرم.</CardDescription>
           </CardHeader>
@@ -88,7 +87,7 @@ export default function DashboardPage() {
                     <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar" />
                     <AvatarFallback>{activity.avatar}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="flex-1 text-right">
                     <p className="text-sm">
                       <span className="font-medium text-foreground">{activity.user}</span> {activity.action}.
                     </p>
@@ -102,7 +101,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="text-right">
             <CardTitle>آیتم‌های پرفروش</CardTitle>
             <CardDescription>محبوب‌ترین آیتم‌ها بر اساس فروش یا درآمد.</CardDescription>
           </CardHeader>
@@ -110,20 +109,20 @@ export default function DashboardPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>آیتم</TableHead>
-                  <TableHead>فروش</TableHead>
+                  <TableHead className="text-right">آیتم</TableHead>
+                  <TableHead className="text-center">فروش</TableHead>
                   <TableHead className="text-left">درآمد</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {topItems.slice(0, 5).map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <div className="font-medium">{item.name}</div>
                       <div className="text-xs text-muted-foreground">{item.category}</div>
                     </TableCell>
-                    <TableCell>{item.sales}</TableCell>
-                    <TableCell className="text-left">{item.revenue}</TableCell>
+                    <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
+                    <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

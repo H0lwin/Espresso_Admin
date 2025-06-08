@@ -122,7 +122,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/dashboard/admin/profile" className="flex items-center">
-                <UserCircle className="ms-2 h-4 w-4" />
+                <UserCircle2 className="ms-2 h-4 w-4" />
                 <span>پروفایل</span>
               </Link>
             </DropdownMenuItem>
