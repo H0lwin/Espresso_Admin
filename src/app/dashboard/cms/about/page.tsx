@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -7,23 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, Save, UploadCloud, Image as ImageIcon, CalendarIcon, UserPlus } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Save, UploadCloud, UserPlus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimelineEvent {
   id: string;
@@ -42,11 +42,17 @@ interface TeamMember {
 }
 
 export default function CmsAboutPage() {
-  // Timeline state
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isTimelineFormSaving, setIsTimelineFormSaving] = React.useState(false);
+  const [isTeamFormSaving, setIsTeamFormSaving] = React.useState(false);
+
+
+  // وضعیت تایم‌لاین
   const [timelineEvents, setTimelineEvents] = React.useState<TimelineEvent[]>([
-    { id: "t1", year: "2018", title: "Espresso Edge Founded", description: "Our journey began with a passion for perfect coffee." },
-    { id: "t2", year: "2020", title: "First Flagship Store Opened", description: "Expanded to our first physical location, serving the local community." },
-    { id: "t3", year: "2022", title: "Online Store Launch", description: "Brought our signature blends and merchandise to customers nationwide." },
+    { id: "t1", year: "۲۰۱۸", title: "تاسیس اسپرسو اِج", description: "سفر ما با اشتیاق به قهوه بی‌نقص آغاز شد." },
+    { id: "t2", year: "۲۰۲۰", title: "افتتاح اولین فروشگاه اصلی", description: "گسترش به اولین مکان فیزیکی، خدمت‌رسانی به جامعه محلی." },
+    { id: "t3", year: "۲۰۲۲", title: "راه‌اندازی فروشگاه آنلاین", description: "عرضه ترکیبات و محصولات ویژه به مشتریان سراسر کشور." },
   ]);
   const [isTimelineFormOpen, setIsTimelineFormOpen] = React.useState(false);
   const [editingTimelineEvent, setEditingTimelineEvent] = React.useState<TimelineEvent | null>(null);
@@ -54,10 +60,10 @@ export default function CmsAboutPage() {
   const [timelineTitle, setTimelineTitle] = React.useState("");
   const [timelineDescription, setTimelineDescription] = React.useState("");
 
-  // Team Members state
+  // وضعیت اعضای تیم
   const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([
-    { id: "tm1", name: "Jane Doe", role: "Founder & CEO", bio: "Jane leads Espresso Edge with a vision for quality and community.", imageUrl: "https://placehold.co/150x150.png" },
-    { id: "tm2", name: "John Smith", role: "Head Barista", bio: "John is the master behind our signature brews, training our team to perfection.", imageUrl: "https://placehold.co/150x150.png" },
+    { id: "tm1", name: "سارا احمدی", role: "موسس و مدیرعامل", bio: "سارا اسپرسو اِج را با چشم‌اندازی برای کیفیت و جامعه رهبری می‌کند.", imageUrl: "https://placehold.co/150x150.png" },
+    { id: "tm2", name: "علی رضایی", role: "باریستای ارشد", bio: "علی استاد پشت ترکیبات ویژه ماست و تیم ما را به کمال آموزش می‌دهد.", imageUrl: "https://placehold.co/150x150.png" },
   ]);
   const [isTeamFormOpen, setIsTeamFormOpen] = React.useState(false);
   const [editingTeamMember, setEditingTeamMember] = React.useState<TeamMember | null>(null);
@@ -68,7 +74,7 @@ export default function CmsAboutPage() {
   const [memberImageFile, setMemberImageFile] = React.useState<File | null>(null);
 
 
-  // Timeline handlers
+  // مدیریت تایم‌لاین
   const handleAddTimelineEvent = () => {
     setEditingTimelineEvent(null);
     setTimelineYear("");
@@ -87,19 +93,25 @@ export default function CmsAboutPage() {
 
   const handleDeleteTimelineEvent = (eventId: string) => {
     setTimelineEvents(prev => prev.filter(event => event.id !== eventId));
+    toast({ title: "رویداد تایم‌لاین حذف شد" });
   };
 
-  const handleTimelineFormSubmit = (e: React.FormEvent) => {
+  const handleTimelineFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsTimelineFormSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     if (editingTimelineEvent) {
       setTimelineEvents(prev => prev.map(event => event.id === editingTimelineEvent.id ? { ...editingTimelineEvent, year: timelineYear, title: timelineTitle, description: timelineDescription } : event));
+      toast({ title: "رویداد تایم‌لاین به‌روزرسانی شد" });
     } else {
       setTimelineEvents(prev => [...prev, { id: `t${Date.now()}`, year: timelineYear, title: timelineTitle, description: timelineDescription }]);
+      toast({ title: "رویداد تایم‌لاین اضافه شد" });
     }
+    setIsTimelineFormSaving(false);
     setIsTimelineFormOpen(false);
   };
 
-  // Team Member handlers
+  // مدیریت اعضای تیم
   const handleAddTeamMember = () => {
     setEditingTeamMember(null);
     setMemberName("");
@@ -122,6 +134,7 @@ export default function CmsAboutPage() {
 
   const handleDeleteTeamMember = (memberId: string) => {
     setTeamMembers(prev => prev.filter(member => member.id !== memberId));
+    toast({ title: "عضو تیم حذف شد" });
   };
 
   const handleTeamMemberImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,8 +149,10 @@ export default function CmsAboutPage() {
     }
   };
 
-  const handleTeamFormSubmit = (e: React.FormEvent) => {
+  const handleTeamFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsTeamFormSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const memberData = { 
       name: memberName, 
       role: memberRole, 
@@ -147,38 +162,48 @@ export default function CmsAboutPage() {
     };
     if (editingTeamMember) {
       setTeamMembers(prev => prev.map(member => member.id === editingTeamMember.id ? { ...editingTeamMember, ...memberData } : member));
+      toast({ title: "عضو تیم به‌روزرسانی شد" });
     } else {
       setTeamMembers(prev => [...prev, { id: `tm${Date.now()}`, ...memberData }]);
+      toast({ title: "عضو تیم اضافه شد" });
     }
+    setIsTeamFormSaving(false);
     setIsTeamFormOpen(false);
   };
   
-  const handleSaveChanges = () => {
-    console.log("Saving About Page Data:", { timelineEvents, teamMembers });
-    alert("Changes saved (check console)!");
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log("ذخیره اطلاعات صفحه درباره ما:", { timelineEvents, teamMembers });
+    toast({
+      title: "تغییرات ذخیره شد",
+      description: "اطلاعات صفحه درباره ما با موفقیت ذخیره شد.",
+    });
+    setIsSaving(false);
   };
 
 
   return (
     <>
       <PageHeader
-        title="CMS: About Page"
-        description="Manage the content for your About Us page, including company timeline and team members."
+        title="CMS: صفحه درباره ما"
+        description="محتوای صفحه درباره ما، شامل تایم‌لاین شرکت و اعضای تیم را مدیریت کنید."
         actions={
-          <Button onClick={handleSaveChanges}>
-            <Save className="mr-2 h-4 w-4" /> Save All Changes
+          <Button onClick={handleSaveChanges} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+            {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
+            {isSaving ? "در حال ذخیره..." : "ذخیره تمام تغییرات"}
           </Button>
         }
       />
 
       <Accordion type="multiple" defaultValue={["timeline", "team"]} className="w-full space-y-4">
-        {/* Timeline Section */}
+        {/* بخش تایم‌لاین شرکت */}
         <AccordionItem value="timeline">
-          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">Company Timeline</AccordionTrigger>
+          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">تایم‌لاین شرکت</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="mb-4">
-              <Button onClick={handleAddTimelineEvent}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Timeline Event
+              <Button onClick={handleAddTimelineEvent} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                <PlusCircle className="ml-2 h-4 w-4" /> افزودن رویداد تایم‌لاین
               </Button>
             </div>
             <div className="space-y-4">
@@ -188,10 +213,10 @@ export default function CmsAboutPage() {
                     <div className="flex justify-between items-center">
                       <CardTitle>{event.year} - {event.title}</CardTitle>
                       <div className="space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditTimelineEvent(event)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditTimelineEvent(event)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteTimelineEvent(event.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteTimelineEvent(event.id)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -202,18 +227,18 @@ export default function CmsAboutPage() {
                   </CardContent>
                 </Card>
               ))}
-              {timelineEvents.length === 0 && <p className="text-muted-foreground">No timeline events added yet.</p>}
+              {timelineEvents.length === 0 && <p className="text-muted-foreground text-center">هنوز هیچ رویدادی در تایم‌لاین اضافه نشده است.</p>}
             </div>
           </AccordionContent>
         </AccordionItem>
 
-        {/* Team Members Section */}
+        {/* بخش اعضای تیم */}
         <AccordionItem value="team">
-          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">Team Members</AccordionTrigger>
+          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">اعضای تیم</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="mb-4">
-              <Button onClick={handleAddTeamMember}>
-                <UserPlus className="mr-2 h-4 w-4" /> Add Team Member
+              <Button onClick={handleAddTeamMember} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                <UserPlus className="ml-2 h-4 w-4" /> افزودن عضو تیم
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -226,83 +251,89 @@ export default function CmsAboutPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground text-center mb-4">{member.bio}</p>
-                    <div className="flex justify-center space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditTeamMember(member)}>
-                        <Edit className="mr-1 h-3 w-3" /> Edit
+                    <div className="flex justify-center space-x-2 space-x-reverse">
+                      <Button variant="outline" size="sm" onClick={() => handleEditTeamMember(member)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                        <Edit className="ml-1 h-3 w-3" /> ویرایش
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteTeamMember(member.id)}>
-                        <Trash2 className="mr-1 h-3 w-3" /> Delete
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteTeamMember(member.id)} disabled={isSaving || isTimelineFormSaving || isTeamFormSaving}>
+                        <Trash2 className="ml-1 h-3 w-3" /> حذف
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-               {teamMembers.length === 0 && <p className="text-muted-foreground md:col-span-2 lg:col-span-3 text-center">No team members added yet.</p>}
+               {teamMembers.length === 0 && <p className="text-muted-foreground md:col-span-2 lg:col-span-3 text-center">هنوز هیچ عضو تیمی اضافه نشده است.</p>}
             </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
 
 
-      {/* Timeline Event Form Dialog */}
+      {/* دیالوگ فرم رویداد تایم‌لاین */}
       <Dialog open={isTimelineFormOpen} onOpenChange={setIsTimelineFormOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingTimelineEvent ? "Edit Timeline Event" : "Add New Timeline Event"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingTimelineEvent ? "ویرایش رویداد تایم‌لاین" : "افزودن رویداد جدید به تایم‌لاین"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleTimelineFormSubmit} className="space-y-4 py-4">
             <div>
-              <Label htmlFor="timelineYear">Year</Label>
-              <Input id="timelineYear" value={timelineYear} onChange={(e) => setTimelineYear(e.target.value)} placeholder="e.g., 2023" required />
+              <Label htmlFor="timelineYear">سال</Label>
+              <Input id="timelineYear" value={timelineYear} onChange={(e) => setTimelineYear(e.target.value)} placeholder="مثلا ۱۳۹۹" required disabled={isTimelineFormSaving}/>
             </div>
             <div>
-              <Label htmlFor="timelineTitle">Title</Label>
-              <Input id="timelineTitle" value={timelineTitle} onChange={(e) => setTimelineTitle(e.target.value)} placeholder="e.g., Milestone Achieved" required />
+              <Label htmlFor="timelineTitle">عنوان</Label>
+              <Input id="timelineTitle" value={timelineTitle} onChange={(e) => setTimelineTitle(e.target.value)} placeholder="مثلا دستیابی به نقطه عطف" required disabled={isTimelineFormSaving}/>
             </div>
             <div>
-              <Label htmlFor="timelineDescription">Description</Label>
-              <Textarea id="timelineDescription" value={timelineDescription} onChange={(e) => setTimelineDescription(e.target.value)} placeholder="Describe the event..." required />
+              <Label htmlFor="timelineDescription">توضیحات</Label>
+              <Textarea id="timelineDescription" value={timelineDescription} onChange={(e) => setTimelineDescription(e.target.value)} placeholder="رویداد را توصیف کنید..." required disabled={isTimelineFormSaving}/>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsTimelineFormOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingTimelineEvent ? "Save Changes" : "Add Event"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsTimelineFormOpen(false)} disabled={isTimelineFormSaving}>انصراف</Button>
+              <Button type="submit" disabled={isTimelineFormSaving}>
+                {isTimelineFormSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                {editingTimelineEvent ? "ذخیره تغییرات" : "افزودن رویداد"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Team Member Form Dialog */}
+      {/* دیالوگ فرم عضو تیم */}
       <Dialog open={isTeamFormOpen} onOpenChange={setIsTeamFormOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingTeamMember ? "Edit Team Member" : "Add New Team Member"}</DialogTitle>
+          <DialogHeader className="text-right">
+            <DialogTitle>{editingTeamMember ? "ویرایش عضو تیم" : "افزودن عضو جدید به تیم"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleTeamFormSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="memberName">Name</Label>
-              <Input id="memberName" value={memberName} onChange={(e) => setMemberName(e.target.value)} required />
+              <Label htmlFor="memberName">نام</Label>
+              <Input id="memberName" value={memberName} onChange={(e) => setMemberName(e.target.value)} required disabled={isTeamFormSaving}/>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memberRole">Role</Label>
-              <Input id="memberRole" value={memberRole} onChange={(e) => setMemberRole(e.target.value)} required />
+              <Label htmlFor="memberRole">نقش</Label>
+              <Input id="memberRole" value={memberRole} onChange={(e) => setMemberRole(e.target.value)} required disabled={isTeamFormSaving}/>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memberBio">Bio</Label>
-              <Textarea id="memberBio" value={memberBio} onChange={(e) => setMemberBio(e.target.value)} required />
+              <Label htmlFor="memberBio">بیوگرافی</Label>
+              <Textarea id="memberBio" value={memberBio} onChange={(e) => setMemberBio(e.target.value)} required disabled={isTeamFormSaving}/>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memberImage">Profile Image</Label>
+              <Label htmlFor="memberImageUpload">تصویر پروفایل</Label>
                <div className="flex items-center gap-4">
-                {memberImagePreview && <Image src={memberImagePreview} alt="Preview" width={80} height={80} className="rounded-full object-cover border" data-ai-hint="profile image" />}
-                <Input id="memberImage" type="file" onChange={handleTeamMemberImageUpload} accept="image/*" className="hidden" />
-                 <Button type="button" variant="outline" onClick={() => document.getElementById('memberImage')?.click()}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> Upload Image
+                {memberImagePreview && <Image src={memberImagePreview} alt="پیش‌نمایش" width={80} height={80} className="rounded-full object-cover border" data-ai-hint="profile image" />}
+                <Input id="memberImageUploadInput" type="file" onChange={handleTeamMemberImageUpload} accept="image/*" className="hidden" />
+                 <Button type="button" variant="outline" onClick={() => document.getElementById('memberImageUploadInput')?.click()} disabled={isTeamFormSaving}>
+                  <UploadCloud className="ml-2 h-4 w-4" /> بارگذاری تصویر
                 </Button>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsTeamFormOpen(false)}>Cancel</Button>
-              <Button type="submit">{editingTeamMember ? "Save Changes" : "Add Member"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsTeamFormOpen(false)} disabled={isTeamFormSaving}>انصراف</Button>
+              <Button type="submit" disabled={isTeamFormSaving}>
+                {isTeamFormSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                {editingTeamMember ? "ذخیره تغییرات" : "افزودن عضو"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -310,3 +341,5 @@ export default function CmsAboutPage() {
     </>
   );
 }
+
+    
