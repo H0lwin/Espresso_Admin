@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation"; // Import useRouter
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
@@ -33,10 +33,10 @@ import { useToast } from "@/hooks/use-toast";
 interface Activity {
   id: number | string;
   user: string;
-  avatar: string;
+  avatar: string; // Should be initials or a letter for placeholder
   action: string;
   time: string;
-  type: string;
+  type: string; // e.g., 'order', 'user', 'menu'
 }
 
 interface TopItem {
@@ -44,20 +44,20 @@ interface TopItem {
   name: string;
   category: string;
   sales: number;
-  revenue: string; // Assuming revenue is formatted string from API
+  revenue: number; // Changed to number for easier formatting
 }
 
 interface DashboardStats {
-  totalSales: string;
-  totalOrders: string;
-  newUsers: string;
-  subscribers: string;
-  topItemName: string;
-  totalSalesChange: string;
-  totalOrdersChange: string;
-  newUsersChange: string;
-  subscribersChange: string;
-  topItemSales: string;
+  total_sales: number;
+  total_orders: number;
+  new_users: number;
+  subscribers: number;
+  top_item_name: string;
+  total_sales_change: string; // e.g., "+5.2%"
+  total_orders_change: string;
+  new_users_change: string;
+  subscribers_change_count: number; // e.g., 5 (new subscribers)
+  top_item_sales_count: number;
 }
 
 
@@ -73,7 +73,7 @@ const getIconForActivity = (type: string) => {
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const [recentActivities, setRecentActivities] = React.useState<Activity[]>([]);
   const [topItems, setTopItems] = React.useState<TopItem[]>([]);
   const [stats, setStats] = React.useState<DashboardStats | null>(null);
@@ -82,21 +82,23 @@ export default function DashboardPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+      let activityError = false, topItemsError = false, statsError = false;
+
       try {
         const [activitiesRes, topItemsRes, statsRes] = await Promise.all([
-          fetch("/api/v1/dashboard/recent-activities/"),
-          fetch("/api/v1/dashboard/top-items/"),
-          fetch("/api/v1/dashboard/stats/"),
+          fetch("/api/v1/dashboard/recent-activities/").catch(() => { activityError = true; return null; }),
+          fetch("/api/v1/dashboard/top-items/").catch(() => { topItemsError = true; return null; }),
+          fetch("/api/v1/dashboard/stats/").catch(() => { statsError = true; return null; }),
         ]);
 
-        let activitiesData, topItemsData, statsData;
-
-        if (activitiesRes.ok) {
-            activitiesData = await activitiesRes.json();
+        if (activitiesRes && activitiesRes.ok) {
+            const activitiesData = await activitiesRes.json();
             setRecentActivities(activitiesData.results || []);
         } else {
-            console.error("Failed to fetch recent activities:", activitiesRes.statusText);
-            setRecentActivities([]); // Set to empty on error
+            activityError = true;
+            setRecentActivities([]);
+            const errorMsg = activitiesRes ? (await activitiesRes.json().catch(()=>({}))).detail || `Status: ${activitiesRes.status}` : "Network error";
+            console.error("Failed to fetch recent activities:", errorMsg);
             toast({
               title: "خطا در بارگذاری فعالیت‌های اخیر",
               description: "امکان دریافت اطلاعات فعالیت‌های اخیر وجود نداشت.",
@@ -104,12 +106,14 @@ export default function DashboardPage() {
             });
         }
 
-        if (topItemsRes.ok) {
-            topItemsData = await topItemsRes.json();
+        if (topItemsRes && topItemsRes.ok) {
+            const topItemsData = await topItemsRes.json();
             setTopItems(topItemsData.results || []);
         } else {
-            console.error("Failed to fetch top items:", topItemsRes.statusText);
-            setTopItems([]); // Set to empty on error
+            topItemsError = true;
+            setTopItems([]);
+            const errorMsg = topItemsRes ? (await topItemsRes.json().catch(()=>({}))).detail || `Status: ${topItemsRes.status}` : "Network error";
+            console.error("Failed to fetch top items:", errorMsg);
             toast({
               title: "خطا در بارگذاری آیتم‌های برتر",
               description: "امکان دریافت اطلاعات آیتم‌های پرفروش وجود نداشت.",
@@ -117,23 +121,36 @@ export default function DashboardPage() {
             });
         }
 
-        if (statsRes.ok) {
-            statsData = await statsRes.json();
+        if (statsRes && statsRes.ok) {
+            const statsData = await statsRes.json();
             setStats(statsData);
         } else {
-            console.error("Failed to fetch dashboard stats:", statsRes.statusText);
-            setStats(null); // Set to null on error
-             toast({
+            statsError = true;
+            setStats(null);
+            let errorDetail = "امکان دریافت آمار کلی داشبورد وجود نداشت.";
+            if (statsRes) {
+                try {
+                    const errorData = await statsRes.json();
+                    errorDetail = errorData.detail || errorData.message || `خطای سرور: ${statsRes.status}`;
+                } catch (e) {
+                    errorDetail = `خطای شبکه یا پاسخ نامعتبر: ${statsRes.status}${statsRes.statusText ? ' - ' + statsRes.statusText : ''}`;
+                }
+            } else {
+                errorDetail = "خطای شبکه در دریافت آمار داشبورد.";
+            }
+            console.error("Failed to fetch dashboard stats. Detail:", errorDetail, statsRes ? `Status: ${statsRes.status}`: "");
+            toast({
               title: "خطا در بارگذاری آمار داشبورد",
-              description: "امکان دریافت آمار کلی داشبورد وجود نداشت.",
+              description: errorDetail,
               variant: "destructive",
             });
         }
 
-      } catch (error: any) {
+      } catch (error: any) { // Catch-all for Promise.all or other unexpected errors
+        console.error("Dashboard data fetch error:", error);
         toast({
           title: "خطا در ارتباط با سرور",
-          description: error.message || "امکان بارگذاری کامل اطلاعات داشبورد وجود ندارد.",
+          description: "امکان بارگذاری کامل اطلاعات داشبورد وجود ندارد.",
           variant: "destructive",
         });
         setRecentActivities([]);
@@ -160,11 +177,11 @@ export default function DashboardPage() {
       <PageHeader title="نمای کلی داشبورد" description="خوش آمدید ادمین! آخرین وضعیت به شرح زیر است." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
-        <StatCard title="کل فروش" value={stats?.totalSales || "۰ ریال"} icon={DollarSign} change={stats?.totalSalesChange || "۰٪"} changeType={stats?.totalSalesChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="کل سفارشات" value={stats?.totalOrders || "۰"} icon={ShoppingCart} change={stats?.totalOrdersChange || "۰٪"} changeType={stats?.totalOrdersChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="کاربران جدید" value={stats?.newUsers || "۰"} icon={Users} change={stats?.newUsersChange || "۰٪"} changeType={stats?.newUsersChange?.startsWith('-') ? "negative" : "positive"} />
-        <StatCard title="مشترکین" value={stats?.subscribers || "۰"} icon={Mail} change={stats?.subscribersChange || "۰"} changeType="positive" />
-        <StatCard title="آیتم برتر" value={stats?.topItemName || "-"} icon={TrendingUp} change={`فروش ${stats?.topItemSales || "۰"} واحد`} />
+        <StatCard title="کل فروش" value={`${(stats?.total_sales || 0).toLocaleString('fa-IR')} ریال`} icon={DollarSign} change={`${stats?.total_sales_change || "۰٪"}`} changeType={stats?.total_sales_change?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کل سفارشات" value={(stats?.total_orders || 0).toLocaleString('fa-IR')} icon={ShoppingCart} change={`${stats?.total_orders_change || "۰٪"}`} changeType={stats?.total_orders_change?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="کاربران جدید" value={(stats?.new_users || 0).toLocaleString('fa-IR')} icon={Users} change={`${stats?.new_users_change || "۰٪"}`} changeType={stats?.new_users_change?.startsWith('-') ? "negative" : "positive"} />
+        <StatCard title="مشترکین" value={(stats?.subscribers || 0).toLocaleString('fa-IR')} icon={Mail} change={`${(stats?.subscribers_change_count || 0) > 0 ? '+' : ''}${(stats?.subscribers_change_count || 0).toLocaleString('fa-IR')}`} changeType={(stats?.subscribers_change_count || 0) >= 0 ? "positive" : "negative"} />
+        <StatCard title="آیتم برتر" value={stats?.top_item_name || "-"} icon={TrendingUp} change={`فروش ${(stats?.top_item_sales_count || 0).toLocaleString('fa-IR')} واحد`} />
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -185,14 +202,14 @@ export default function DashboardPage() {
                 {recentActivities.map((activity) => (
                   <li key={activity.id} className="flex items-start space-x-reverse space-x-3">
                     <Avatar className="h-10 w-10 border">
-                      <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar" />
+                      <AvatarImage src={`https://placehold.co/40x40.png?text=${activity.avatar}`} alt={activity.user} data-ai-hint="user avatar"/>
                       <AvatarFallback>{activity.avatar}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 text-right">
                       <p className="text-sm">
                         <span className="font-medium text-foreground">{activity.user}</span> {activity.action}.
                       </p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(activity.time).toLocaleString('fa-IR')}</p>
                     </div>
                     {getIconForActivity(activity.type)}
                   </li>
@@ -200,7 +217,7 @@ export default function DashboardPage() {
               </ul>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">
-                {isLoading ? "در حال بارگذاری فعالیت‌ها..." : "فعالیت اخیری یافت نشد."}
+                فعالیت اخیری یافت نشد.
               </p>
             )}
           </CardContent>
@@ -218,7 +235,7 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">آیتم</TableHead>
-                      <TableHead className="text-center">فروش</TableHead>
+                      <TableHead className="text-center">فروش (تعداد)</TableHead>
                       <TableHead className="text-left">درآمد</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -230,14 +247,14 @@ export default function DashboardPage() {
                           <div className="text-xs text-muted-foreground">{item.category}</div>
                         </TableCell>
                         <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
-                        <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
+                        <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')} ریال</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               ) : (
                  <p className="text-sm text-muted-foreground text-center py-4">
-                   {isLoading ? "در حال بارگذاری آیتم‌ها..." : "آیتم پرفروشی یافت نشد."}
+                   آیتم پرفروشی یافت نشد.
                  </p>
               )}
             </div>
