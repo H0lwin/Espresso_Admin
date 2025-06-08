@@ -48,30 +48,48 @@ import { useToast } from "@/hooks/use-toast";
 import { getCookie } from "@/lib/utils";
 
 type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+type ApiOrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled"; // For API communication
 type PaymentStatus = "Paid" | "Unpaid" | "Refunded";
+type ApiPaymentStatus = "paid" | "unpaid" | "refunded"; // For API communication
 
 interface OrderItem {
   id: string | number;
   name: string;
   quantity: number;
   price: number;
-  image: string;
+  image_url?: string; // field from API
 }
 interface OrderCustomer {
   name: string;
   email: string;
-  avatar?: string; // API might send full URL or just initials
-  avatar_initials?: string; // Or just initials
+  avatar_url?: string; 
+  avatar_initials?: string;
 }
 interface Order {
   id: string | number;
-  customer: OrderCustomer;
-  date: string; // Should be ISO string from API
-  status: OrderStatus;
+  customer: OrderCustomer; // This might be simplified or an ID from API, then fetched
+  date: string; // ISO string from API
+  status: ApiOrderStatus; // API status
   total: number;
-  payment_status: PaymentStatus; // Django often uses snake_case
+  payment_status: ApiPaymentStatus; // API payment status
   items: OrderItem[];
 }
+
+const orderStatusApiToDisplay: Record<ApiOrderStatus, OrderStatus> = {
+  pending: "Pending",
+  processing: "Processing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+const orderStatusDisplayToApi: Record<OrderStatus, ApiOrderStatus> = {
+  Pending: "pending",
+  Processing: "processing",
+  Shipped: "shipped",
+  Delivered: "delivered",
+  Cancelled: "cancelled",
+};
 
 const orderStatusTranslations: Record<OrderStatus, string> = {
   Pending: "در انتظار",
@@ -81,28 +99,34 @@ const orderStatusTranslations: Record<OrderStatus, string> = {
   Cancelled: "لغو شده",
 };
 
+const paymentStatusApiToDisplay: Record<ApiPaymentStatus, PaymentStatus> = {
+  paid: "Paid",
+  unpaid: "Unpaid",
+  refunded: "Refunded",
+};
+
 const paymentStatusTranslations: Record<PaymentStatus, string> = {
   Paid: "پرداخت شده",
   Unpaid: "پرداخت نشده",
   Refunded: "مسترد شده",
 };
 
-const getStatusBadgeVariant = (status: OrderStatus) => {
+const getStatusBadgeVariant = (status: ApiOrderStatus) => {
   switch (status) {
-    case "Delivered": return "default"; 
-    case "Processing": return "secondary"; 
-    case "Shipped": return "outline"; 
-    case "Pending": return "destructive"; 
-    case "Cancelled": return "outline"; 
+    case "delivered": return "default"; 
+    case "processing": return "secondary"; 
+    case "shipped": return "outline"; 
+    case "pending": return "destructive"; 
+    case "cancelled": return "outline"; 
     default: return "outline";
   }
 };
 
-const getPaymentBadgeVariant = (status: PaymentStatus) => {
+const getPaymentBadgeVariant = (status: ApiPaymentStatus) => {
   switch (status) {
-    case "Paid": return "default";
-    case "Unpaid": return "destructive";
-    case "Refunded": return "secondary";
+    case "paid": return "default";
+    case "unpaid": return "destructive";
+    case "refunded": return "secondary";
     default: return "outline";
   }
 };
@@ -111,21 +135,21 @@ export default function OrdersPage() {
   const { toast } = useToast();
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = React.useState<ApiOrderStatus | "all">("all");
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const [isNewOrderFormOpen, setIsNewOrderFormOpen] = React.useState(false);
   const [isSubmittingNewOrder, setIsSubmittingNewOrder] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoadingData, setIsLoadingData] = React.useState(true);
 
   const [newOrderCustomerName, setNewOrderCustomerName] = React.useState("");
   const [newOrderCustomerEmail, setNewOrderCustomerEmail] = React.useState("");
-  const [newOrderItemsText, setNewOrderItemsText] = React.useState(""); // For simplified text input
+  const [newOrderItemsText, setNewOrderItemsText] = React.useState(""); 
   const [newOrderTotal, setNewOrderTotal] = React.useState("");
 
   React.useEffect(() => {
     const fetchOrders = async () => {
-      setIsLoading(true);
-      let url = "/api/v1/orders/"; // Replace with your actual endpoint
+      setIsLoadingData(true);
+      let url = "/api/v1/orders/"; 
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (statusFilter !== "all") params.append("status", statusFilter);
@@ -139,7 +163,7 @@ export default function OrdersPage() {
           throw new Error("خطا در دریافت لیست سفارشات");
         }
         const data = await response.json();
-        setOrders(data.results || []); // Assuming Django Rest Framework pagination
+        setOrders(data.results || []); 
       } catch (error) {
         toast({
           title: "خطا",
@@ -148,7 +172,7 @@ export default function OrdersPage() {
         });
         setOrders([]);
       } finally {
-        setIsLoading(false);
+        setIsLoadingData(false);
       }
     };
     fetchOrders();
@@ -170,31 +194,39 @@ export default function OrdersPage() {
     e.preventDefault();
     setIsSubmittingNewOrder(true);
 
-    // Basic parsing for simplified item entry, in a real scenario this would be more robust
     const items = newOrderItemsText.split('\n').map(line => {
       const parts = line.split(',');
       return {
-        name: parts[0]?.trim() || "آیتم سفارشی",
+        product_id: parts[0]?.trim() || "unknown-product", // Assuming first part is product ID or name
         quantity: parseInt(parts[1]?.trim()) || 1,
-        price: parseFloat(parts[2]?.trim()) || parseFloat(newOrderTotal) || 0,
-        image: "https://placehold.co/100x100.png" // Placeholder
+        price: parseFloat(parts[2]?.trim()) || 0,
       };
-    }).filter(item => item.name);
+    }).filter(item => item.product_id && item.quantity > 0 && item.price >= 0);
+
+    if (items.length === 0 && !parseFloat(newOrderTotal)) {
+        toast({ title: "خطا", description: "حداقل یک آیتم یا مجموع سفارش معتبر وارد کنید.", variant: "destructive"});
+        setIsSubmittingNewOrder(false);
+        return;
+    }
+    
+    let calculatedTotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const finalTotal = parseFloat(newOrderTotal) || calculatedTotal;
+
 
     const newOrderPayload = {
       customer: { 
         name: newOrderCustomerName, 
         email: newOrderCustomerEmail, 
       },
-      status: "Pending", // Default status
-      total: parseFloat(newOrderTotal) || 0,
-      payment_status: "Unpaid", // Default payment status
-      items: items.length > 0 ? items : [{ id: "item-custom", name: "آیتم سفارشی", quantity: 1, price: parseFloat(newOrderTotal) || 0, image: "https://placehold.co/100x100.png" }],
+      status: "pending" as ApiOrderStatus, 
+      total_amount: finalTotal,
+      payment_status: "unpaid" as ApiPaymentStatus, 
+      items: items, 
     };
 
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch("/api/v1/orders/", { // Replace with your actual endpoint
+      const response = await fetch("/api/v1/orders/", { 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -205,7 +237,7 @@ export default function OrdersPage() {
 
       if (response.ok) {
         const createdOrder = await response.json();
-        setOrders(prevOrders => [createdOrder, ...prevOrders]);
+        setOrders(prevOrders => [createdOrder, ...prevOrders].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         toast({
           title: "سفارش ایجاد شد",
           description: `سفارش جدید ${createdOrder.id} با موفقیت ایجاد شد.`,
@@ -230,36 +262,44 @@ export default function OrdersPage() {
     }
   };
   
-  // Placeholder for updateStatus - this would call your API
-  const handleChangeOrderStatus = async (orderId: string | number, newStatus: OrderStatus) => {
-    // Find the order to update its UI optimistically or refetch
+  const handleChangeOrderStatus = async (orderId: string | number, newApiStatus: ApiOrderStatus) => {
     const originalOrders = [...orders];
     setOrders(prevOrders => 
-      prevOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o)
+      prevOrders.map(o => o.id === orderId ? {...o, status: newApiStatus} : o)
     );
+    if (selectedOrder && selectedOrder.id === orderId) {
+      setSelectedOrder(prev => prev ? {...prev, status: newApiStatus} : null);
+    }
 
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch(`/api/v1/orders/${orderId}/change-status/`, { // Replace with your actual endpoint
-        method: 'PATCH', // or PUT
+      const response = await fetch(`/api/v1/orders/${orderId}/change-status/`, { 
+        method: 'PATCH', 
         headers: {
           'Content-Type': 'application/json',
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newApiStatus }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update order status');
+        throw new Error('عدم موفقیت در به‌روزرسانی وضعیت سفارش');
       }
       const updatedOrder = await response.json();
       setOrders(prevOrders => 
-        prevOrders.map(o => o.id === orderId ? updatedOrder : o)
+        prevOrders.map(o => o.id === orderId ? updatedOrder : o).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       );
-      toast({ title: "وضعیت سفارش به‌روز شد", description: `وضعیت سفارش ${orderId} به ${orderStatusTranslations[newStatus]} تغییر کرد.` });
+       if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder(updatedOrder);
+      }
+      toast({ title: "وضعیت سفارش به‌روز شد", description: `وضعیت سفارش ${orderId} به ${orderStatusTranslations[orderStatusApiToDisplay[newApiStatus]]} تغییر کرد.` });
     } catch (error) {
-      setOrders(originalOrders); // Revert optimistic update
-      toast({ title: "خطا", description: "عدم موفقیت در به‌روزرسانی وضعیت سفارش.", variant: "destructive" });
+      setOrders(originalOrders); 
+       if (selectedOrder && selectedOrder.id === orderId) {
+        const originalSelectedOrder = originalOrders.find(o => o.id === orderId);
+        setSelectedOrder(originalSelectedOrder || null);
+      }
+      toast({ title: "خطا", description: (error as Error).message || "عدم موفقیت در به‌روزرسانی وضعیت سفارش.", variant: "destructive" });
     }
   };
 
@@ -271,10 +311,10 @@ export default function OrdersPage() {
         description="مشاهده، پیگیری و مدیریت تمام سفارشات مشتریان."
         actions={
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline">
+            {/* <Button variant="outline" disabled={isLoadingData}>
               <FileDown className="ms-2 h-4 w-4" /> خروجی CSV
-            </Button>
-            <Button onClick={handleOpenNewOrderForm} disabled={isLoading}>
+            </Button> */}
+            <Button onClick={handleOpenNewOrderForm} disabled={isLoadingData || isSubmittingNewOrder}>
               <PlusCircle className="ms-2 h-4 w-4" /> افزودن سفارش جدید
             </Button>
           </div>
@@ -290,22 +330,27 @@ export default function OrdersPage() {
             className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoadingData}
           />
         </div>
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OrderStatus | "all")}>
+        <Select 
+            value={statusFilter} 
+            onValueChange={(value) => setStatusFilter(value as ApiOrderStatus | "all")}
+            disabled={isLoadingData}
+        >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="فیلتر بر اساس وضعیت" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">همه وضعیت‌ها</SelectItem>
             {Object.entries(orderStatusTranslations).map(([key, value]) => (
-              <SelectItem key={key} value={key}>{value}</SelectItem>
+              <SelectItem key={key} value={orderStatusDisplayToApi[key as OrderStatus]}>{value}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {isLoading ? (
+      {isLoadingData ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="ms-3 text-muted-foreground">در حال بارگذاری سفارشات...</p>
@@ -325,7 +370,7 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.length === 0 && !isLoading && (
+            {orders.length === 0 && !isLoadingData && (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   سفارشی یافت نشد.
@@ -338,7 +383,7 @@ export default function OrdersPage() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={order.customer.avatar || `https://placehold.co/40x40.png?text=${order.customer.avatar_initials || order.customer.name.charAt(0)}`} data-ai-hint="customer avatar" />
+                      <AvatarImage src={order.customer.avatar_url || `https://placehold.co/40x40.png?text=${order.customer.avatar_initials || order.customer.name.charAt(0)}`} data-ai-hint="customer avatar" />
                       <AvatarFallback>{order.customer.avatar_initials || order.customer.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -349,10 +394,10 @@ export default function OrdersPage() {
                 </TableCell>
                 <TableCell>{new Date(order.date).toLocaleDateString('fa-IR')}</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadgeVariant(order.status)}>{orderStatusTranslations[order.status]}</Badge>
+                  <Badge variant={getStatusBadgeVariant(order.status)}>{orderStatusTranslations[orderStatusApiToDisplay[order.status]]}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getPaymentBadgeVariant(order.payment_status)}>{paymentStatusTranslations[order.payment_status]}</Badge>
+                  <Badge variant={getPaymentBadgeVariant(order.payment_status)}>{paymentStatusTranslations[paymentStatusApiToDisplay[order.payment_status]]}</Badge>
                 </TableCell>
                 <TableCell className="text-left">{order.total.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell className="text-left">
@@ -376,14 +421,14 @@ export default function OrdersPage() {
                         <Edit className="ms-2 h-4 w-4" /> ویرایش سفارش
                       </DropdownMenuItem> */}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Shipped")} className="flex items-center" disabled={order.status === "Shipped" || order.status === "Delivered" || order.status === "Cancelled"}>
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "shipped")} className="flex items-center" disabled={order.status === "shipped" || order.status === "delivered" || order.status === "cancelled"}>
                         <Truck className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان ارسال شده
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Delivered")} className="flex items-center" disabled={order.status === "Delivered" || order.status === "Cancelled"}>
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "delivered")} className="flex items-center" disabled={order.status === "delivered" || order.status === "cancelled"}>
                         <CheckCircle className="ms-2 h-4 w-4" /> علامت‌گذاری به عنوان تحویل شده
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "Cancelled")} className="text-destructive flex items-center" disabled={order.status === "Cancelled" || order.status === "Delivered"}>
+                      <DropdownMenuItem onClick={() => handleChangeOrderStatus(order.id, "cancelled")} className="text-destructive flex items-center" disabled={order.status === "cancelled" || order.status === "delivered"}>
                         <XCircle className="ms-2 h-4 w-4" /> لغو سفارش
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -417,11 +462,12 @@ export default function OrdersPage() {
                 <Separator />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">آیتم‌های سفارش</h3>
+                  {selectedOrder.items && selectedOrder.items.length > 0 ? (
                   <ul className="space-y-3">
                     {selectedOrder.items.map(item => (
                       <li key={item.id} className="flex items-center gap-4">
                         <img 
-                          src={item.image || "https://placehold.co/64x64.png"} 
+                          src={item.image_url || "https://placehold.co/64x64.png"} 
                           alt={item.name} 
                           className="h-16 w-16 rounded object-cover"
                           data-ai-hint="product item" 
@@ -434,15 +480,17 @@ export default function OrdersPage() {
                       </li>
                     ))}
                   </ul>
+                  ) : (
+                     <p className="text-sm text-muted-foreground">آیتمی برای این سفارش یافت نشد.</p>
+                  )}
                 </div>
                 <Separator />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">جزئیات قیمت</h3>
                   <div className="space-y-1 text-sm">
-                    {/* Assuming API provides subtotal, shipping, tax if needed, or frontend calculates */}
                     <div className="flex justify-between"><span>جمع فرعی:</span> <span>{selectedOrder.total.toLocaleString('fa-IR')} تومان</span></div>
-                    <div className="flex justify-between"><span>هزینه ارسال:</span> <span>۰ تومان</span></div>
-                    <div className="flex justify-between"><span>مالیات:</span> <span>۰ تومان</span></div>
+                    {/* <div className="flex justify-between"><span>هزینه ارسال:</span> <span>۰ تومان</span></div>
+                    <div className="flex justify-between"><span>مالیات:</span> <span>۰ تومان</span></div> */}
                     <Separator className="my-2"/>
                     <div className="flex justify-between font-semibold text-base"><span>مجموع کل:</span> <span>{selectedOrder.total.toLocaleString('fa-IR')} تومان</span></div>
                   </div>
@@ -451,8 +499,8 @@ export default function OrdersPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">وضعیت</h3>
                   <div className="flex items-center gap-4">
-                    <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="text-sm px-3 py-1">{orderStatusTranslations[selectedOrder.status]}</Badge>
-                    <Badge variant={getPaymentBadgeVariant(selectedOrder.payment_status)} className="text-sm px-3 py-1">{paymentStatusTranslations[selectedOrder.payment_status]}</Badge>
+                    <Badge variant={getStatusBadgeVariant(selectedOrder.status)} className="text-sm px-3 py-1">{orderStatusTranslations[orderStatusApiToDisplay[selectedOrder.status]]}</Badge>
+                    <Badge variant={getPaymentBadgeVariant(selectedOrder.payment_status)} className="text-sm px-3 py-1">{paymentStatusTranslations[paymentStatusApiToDisplay[selectedOrder.payment_status]]}</Badge>
                   </div>
                 </div>
               </div>
@@ -465,7 +513,7 @@ export default function OrdersPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isNewOrderFormOpen} onOpenChange={setIsNewOrderFormOpen}>
+      <Dialog open={isNewOrderFormOpen} onOpenChange={(open) => !isSubmittingNewOrder && setIsNewOrderFormOpen(open)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-right">
             <DialogTitle>افزودن سفارش جدید</DialogTitle>
@@ -478,7 +526,7 @@ export default function OrdersPage() {
                 id="newOrderCustomerName" 
                 value={newOrderCustomerName} 
                 onChange={(e) => setNewOrderCustomerName(e.target.value)} 
-                placeholder="مثلا: جان دو" 
+                placeholder="مثلا: علی رضایی" 
                 required 
                 disabled={isSubmittingNewOrder}
               />
@@ -490,35 +538,34 @@ export default function OrdersPage() {
                 type="email" 
                 value={newOrderCustomerEmail} 
                 onChange={(e) => setNewOrderCustomerEmail(e.target.value)} 
-                placeholder="john.doe@example.com" 
+                placeholder="ali.rezaei@example.com" 
                 required 
                 disabled={isSubmittingNewOrder}
               />
             </div>
             <div>
-              <Label htmlFor="newOrderItemsText">آیتم‌ها (نام،تعداد،قیمت واحد در هر خط، با ویرگول جدا شود)</Label>
+              <Label htmlFor="newOrderItemsText">آیتم‌ها (شناسه/نام محصول،تعداد،قیمت واحد در هر خط، با ویرگول جدا شود)</Label>
               <Textarea 
                 id="newOrderItemsText" 
                 value={newOrderItemsText} 
                 onChange={(e) => setNewOrderItemsText(e.target.value)} 
-                placeholder="مثال: اسپرسو, ۲, ۳۵۰۰۰\nلاته, ۱, ۴۰۰۰۰" 
+                placeholder="مثال: اسپرسو,۲,۳۵۰۰۰\nلاته,۱,۴۰۰۰۰" 
                 rows={3}
                 disabled={isSubmittingNewOrder}
               />
+               <p className="text-xs text-muted-foreground mt-1">این یک روش ساده‌شده برای ورود آیتم‌ها است. برای شناسایی محصول، از شناسه یا نام دقیق آن استفاده کنید.</p>
             </div>
             <div>
-              <Label htmlFor="newOrderTotal">مجموع سفارش (تومان)</Label>
+              <Label htmlFor="newOrderTotal">مجموع کل سفارش (تومان)</Label>
               <Input 
                 id="newOrderTotal" 
                 type="number" 
                 value={newOrderTotal} 
                 onChange={(e) => setNewOrderTotal(e.target.value)} 
-                placeholder="مثلا ۷۵۰۰۰" 
+                placeholder="مثلا ۷۵۰۰۰ (اگر خالی بماند، از آیتم‌ها محاسبه می‌شود)" 
                 step="1000" 
-                required 
                 disabled={isSubmittingNewOrder}
               />
-               <p className="text-xs text-muted-foreground mt-1">توجه: برای این فرم ساده شده، مجموع را دستی محاسبه و وارد کنید.</p>
             </div>
             <DialogFooter className="sm:justify-start">
               <Button type="submit" disabled={isSubmittingNewOrder}>

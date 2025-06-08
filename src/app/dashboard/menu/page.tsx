@@ -31,78 +31,85 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { getCookie } from "@/lib/utils";
 
-type ItemStatus = "Available" | "Unavailable" | "Draft"; // API might use different keys e.g. 'available'
+type ItemDisplayStatus = "Available" | "Unavailable" | "Draft"; 
+type ApiItemStatus = "available" | "unavailable" | "draft"; // API status keys
+
 interface MenuItem {
   id: string | number;
   name: string;
-  category: string; // Assuming category is a string name, could be an ID if normalized
+  category_name: string; // Field from API (assuming category is represented by name)
   price: number;
-  image_url: string; // Django often uses snake_case for URLs from serializers
-  status: ItemStatus;
+  image_url?: string; 
+  status: ApiItemStatus; // API status
   description?: string;
-  // imageFile is for frontend handling only, not part of API response typically
 }
 
-const categoriesFromAPI: string[] = []; // Will be fetched
-const itemStatusTranslations: Record<ItemStatus, string> = {
-  Available: "موجود",
-  Unavailable: "ناموجود",
-  Draft: "پیش‌نویس",
+interface MenuCategory {
+    id: string | number;
+    name: string;
+}
+
+
+const itemStatusApiToDisplay: Record<ApiItemStatus, ItemDisplayStatus> = {
+  available: "Available",
+  unavailable: "Unavailable",
+  draft: "Draft",
 };
-// Map frontend status to potential API status keys if different
-const itemStatusToApi: Record<ItemStatus, string> = {
+const itemStatusDisplayToApi: Record<ItemDisplayStatus, ApiItemStatus> = {
   Available: "available",
   Unavailable: "unavailable",
   Draft: "draft",
+};
+const itemStatusTranslations: Record<ItemDisplayStatus, string> = {
+  Available: "موجود",
+  Unavailable: "ناموجود",
+  Draft: "پیش‌نویس",
 };
 
 
 export default function MenuPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [categoryFilter, setCategoryFilter] = React.useState("همه");
+  const [categoryFilter, setCategoryFilter] = React.useState("همه"); // Stores category name
   const [menuItems, setMenuItems] = React.useState<MenuItem[]>([]);
-  const [categories, setCategories] = React.useState<string[]>(["همه"]);
+  const [categories, setCategories] = React.useState<MenuCategory[]>([]); 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<MenuItem | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false); // Renamed from isLoading for clarity
+  const [isSubmitting, setIsSubmitting] = React.useState(false); 
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
 
   const [itemName, setItemName] = React.useState("");
-  const [itemCategory, setItemCategory] = React.useState("");
+  const [itemCategoryName, setItemCategoryName] = React.useState(""); // Stores category name for the form
   const [itemPrice, setItemPrice] = React.useState("");
-  const [itemStatus, setItemStatus] = React.useState<ItemStatus>("Available");
+  const [itemDisplayStatus, setItemDisplayStatus] = React.useState<ItemDisplayStatus>("Available");
   const [itemDescription, setItemDescription] = React.useState("");
-  const [itemImagePreview, setItemImagePreview] = React.useState<string | null>(null);
+  const [itemImagePreview, setItemImagePreview] = React.useState<string | null>("https://placehold.co/80x80.png");
   const [itemImageFile, setItemImageFile] = React.useState<File | null>(null);
 
   React.useEffect(() => {
     const fetchData = async () => {
       setIsLoadingData(true);
       try {
-        // Fetch categories
-        const catResponse = await fetch("/api/v1/menu-categories/"); // Replace with your actual endpoint
-        if (!catResponse.ok) throw new Error("Failed to fetch categories");
+        const catResponse = await fetch("/api/v1/menu-categories/"); 
+        if (!catResponse.ok) throw new Error("خطا در دریافت دسته‌بندی‌ها");
         const catData = await catResponse.json();
-        const fetchedCategories = catData.results ? catData.results.map((c: {name: string}) => c.name) : [];
-        setCategories(["همه", ...fetchedCategories]);
-        if (fetchedCategories.length > 0 && !itemCategory) {
-          setItemCategory(fetchedCategories[0]); // Default to first category if creating new
+        const fetchedCategories: MenuCategory[] = catData.results || [];
+        setCategories(fetchedCategories);
+        if (fetchedCategories.length > 0 && !itemCategoryName) {
+          setItemCategoryName(fetchedCategories[0].name); 
         }
 
-
-        // Fetch menu items
-        let url = "/api/v1/menu-items/"; // Replace with your actual endpoint
+        let url = "/api/v1/menu-items/"; 
         const params = new URLSearchParams();
         if (searchTerm) params.append("search", searchTerm);
-        if (categoryFilter !== "همه") params.append("category_name", categoryFilter); // Or category_id if using IDs
+        if (categoryFilter !== "همه") params.append("category_name", categoryFilter); 
         
         const queryString = params.toString();
         if (queryString) url += `?${queryString}`;
 
         const itemsResponse = await fetch(url);
-        if (!itemsResponse.ok) throw new Error("Failed to fetch menu items");
+        if (!itemsResponse.ok) throw new Error("خطا در دریافت آیتم‌های منو");
         const itemsData = await itemsResponse.json();
         setMenuItems(itemsData.results || []);
 
@@ -110,24 +117,24 @@ export default function MenuPage() {
         console.error("Fetch error:", error);
         toast({
           title: "خطا",
-          description: "امکان بارگذاری اطلاعات منو وجود ندارد.",
+          description: (error as Error).message || "امکان بارگذاری اطلاعات منو وجود ندارد.",
           variant: "destructive",
         });
         setMenuItems([]);
-        setCategories(["همه"]);
+        setCategories([]);
       } finally {
         setIsLoadingData(false);
       }
     };
     fetchData();
-  }, [searchTerm, categoryFilter, toast, itemCategory]);
+  }, [searchTerm, categoryFilter, toast]);
 
   const handleAddNewItem = () => {
     setEditingItem(null);
     setItemName("");
-    setItemCategory(categories.length > 1 ? categories[1] : ""); 
+    setItemCategoryName(categories.length > 0 ? categories[0].name : ""); 
     setItemPrice("");
-    setItemStatus("Available");
+    setItemDisplayStatus("Available");
     setItemDescription("");
     setItemImagePreview("https://placehold.co/80x80.png");
     setItemImageFile(null);
@@ -137,11 +144,11 @@ export default function MenuPage() {
   const handleEditItem = (item: MenuItem) => {
     setEditingItem(item);
     setItemName(item.name);
-    setItemCategory(item.category);
+    setItemCategoryName(item.category_name);
     setItemPrice(item.price.toString());
-    setItemStatus(item.status);
+    setItemDisplayStatus(itemStatusApiToDisplay[item.status]);
     setItemDescription(item.description || "");
-    setItemImagePreview(item.image_url);
+    setItemImagePreview(item.image_url || "https://placehold.co/80x80.png");
     setItemImageFile(null);
     setIsFormOpen(true);
   };
@@ -151,17 +158,18 @@ export default function MenuPage() {
     
     const originalItems = [...menuItems];
     setMenuItems(prevItems => prevItems.filter(item => item.id !== itemId));
+    setIsSubmitting(true); // Indicate loading for delete
 
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch(`/api/v1/menu-items/${itemId}/`, { // Replace with your actual endpoint
+      const response = await fetch(`/api/v1/menu-items/${itemId}/`, { 
         method: "DELETE",
         headers: {
          ...(csrfToken && { "X-CSRFToken": csrfToken }),
         },
       });
       if (!response.ok) {
-        throw new Error("Failed to delete item");
+        throw new Error("خطا در حذف آیتم");
       }
       toast({
         title: "آیتم حذف شد",
@@ -171,9 +179,11 @@ export default function MenuPage() {
       setMenuItems(originalItems);
       toast({
         title: "خطا در حذف",
-        description: "امکان حذف آیتم وجود نداشت. لطفا دوباره تلاش کنید.",
+        description: (error as Error).message || "امکان حذف آیتم وجود نداشت. لطفا دوباره تلاش کنید.",
         variant: "destructive",
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -183,18 +193,18 @@ export default function MenuPage() {
 
     const formData = new FormData();
     formData.append("name", itemName);
-    formData.append("category_name", itemCategory); // Adjust if API expects category_id
+    formData.append("category_name", itemCategoryName); 
     formData.append("price", itemPrice);
-    formData.append("status", itemStatusToApi[itemStatus]); // Map to API status value
+    formData.append("status", itemStatusDisplayToApi[itemDisplayStatus]); 
     if (itemDescription) formData.append("description", itemDescription);
     if (itemImageFile) {
-      formData.append("image", itemImageFile); // API field name for image file
+      formData.append("image", itemImageFile); 
     }
     
     const apiEndpoint = editingItem 
-      ? `/api/v1/menu-items/${editingItem.id}/` // Replace with your actual endpoint
-      : "/api/v1/menu-items/";                 // Replace with your actual endpoint
-    const method = editingItem ? "PATCH" : "POST"; // Use PATCH for partial updates or PUT for full replacement
+      ? `/api/v1/menu-items/${editingItem.id}/` 
+      : "/api/v1/menu-items/";                 
+    const method = editingItem ? "PATCH" : "POST"; 
 
     try {
       const csrfToken = getCookie("csrftoken");
@@ -202,14 +212,13 @@ export default function MenuPage() {
         method: method,
         headers: {
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
-          // Do NOT set Content-Type for FormData, browser does it with boundary
         },
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({detail: "خطا در پردازش درخواست"}));
-        throw new Error(errorData.detail || "Failed to save item");
+        throw new Error(errorData.detail || "خطا در ذخیره آیتم");
       }
       const savedItem = await response.json();
 
@@ -258,11 +267,11 @@ export default function MenuPage() {
     { label: "حذف آیتم", icon: Trash2, onClick: () => handleDeleteItem(item.id), isDestructive: true },
   ];
 
-  const getStatusBadgeVariant = (status: ItemStatus) => {
+  const getStatusBadgeVariant = (status: ApiItemStatus) => {
     switch (status) {
-      case "Available": return "default";
-      case "Unavailable": return "destructive";
-      case "Draft": return "secondary";
+      case "available": return "default";
+      case "unavailable": return "destructive";
+      case "draft": return "secondary";
       default: return "outline";
     }
   };
@@ -288,16 +297,17 @@ export default function MenuPage() {
             className="pr-8 w-full md:w-[300px]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            disabled={isLoadingData}
+            disabled={isLoadingData || isSubmitting}
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoadingData}>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoadingData || isSubmitting}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="فیلتر بر اساس دسته‌بندی" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={"همه"}>همه</SelectItem>
             {categories.map(cat => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -341,10 +351,10 @@ export default function MenuPage() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>{item.category}</TableCell>
+                <TableCell>{item.category_name}</TableCell>
                 <TableCell>{item.price.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell>
-                  <Badge variant={getStatusBadgeVariant(item.status)}>{itemStatusTranslations[item.status]}</Badge>
+                  <Badge variant={getStatusBadgeVariant(item.status)}>{itemStatusTranslations[itemStatusApiToDisplay[item.status]]}</Badge>
                 </TableCell>
                 <TableCell className="text-left">
                   <DataTableActions actions={getRowActions(item)} />
@@ -370,14 +380,14 @@ export default function MenuPage() {
                 <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="مثلا کلاسیک لاته" required disabled={isSubmitting} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="itemCategory">دسته‌بندی</Label>
-                <Select value={itemCategory} onValueChange={setItemCategory} required disabled={isSubmitting}>
-                  <SelectTrigger id="itemCategory">
+                <Label htmlFor="itemCategoryName">دسته‌بندی</Label>
+                <Select value={itemCategoryName} onValueChange={setItemCategoryName} required disabled={isSubmitting}>
+                  <SelectTrigger id="itemCategoryName">
                     <SelectValue placeholder="انتخاب دسته‌بندی" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.filter(c => c !== "همه").map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -390,14 +400,14 @@ export default function MenuPage() {
                 <Input id="itemPrice" type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} placeholder="مثلا ۴۵۰۰۰" step="1000" required disabled={isSubmitting} />
               </div>
                <div className="space-y-2">
-                <Label htmlFor="itemStatus">وضعیت</Label>
-                <Select value={itemStatus} onValueChange={(val) => setItemStatus(val as ItemStatus)} required disabled={isSubmitting}>
-                  <SelectTrigger id="itemStatus">
+                <Label htmlFor="itemDisplayStatus">وضعیت</Label>
+                <Select value={itemDisplayStatus} onValueChange={(val) => setItemDisplayStatus(val as ItemDisplayStatus)} required disabled={isSubmitting}>
+                  <SelectTrigger id="itemDisplayStatus">
                     <SelectValue placeholder="انتخاب وضعیت" />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(itemStatusTranslations).map(([key, value]) => (
-                        <SelectItem key={key} value={key as ItemStatus}>{value}</SelectItem>
+                        <SelectItem key={key} value={key as ItemDisplayStatus}>{value}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -49,7 +49,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch("/api/v1/auth/login/", { // Replace with your actual login endpoint
+      const response = await fetch("/api/v1/auth/login/", { 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,12 +59,12 @@ export default function LoginPage() {
       });
 
       if (response.ok) {
-        // Assuming the API returns some user data or a success message
         // const data = await response.json(); 
         toast({
           title: "ورود موفق",
           description: "با موفقیت وارد شدید.",
         });
+        // Assuming your API sets a session cookie upon successful login
         router.push("/dashboard");
       } else {
         const errorData = await response.json().catch(() => ({ detail: "ایمیل یا رمز عبور نامعتبر است." }));
@@ -105,7 +105,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>ایمیل</FormLabel>
                     <FormControl>
-                      <Input placeholder="admin@espressoedge.com" {...field} />
+                      <Input placeholder="admin@espressoedge.com" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -123,6 +123,7 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••" 
                           {...field} 
+                          disabled={isLoading}
                         />
                         <Button
                           type="button"
@@ -130,6 +131,7 @@ export default function LoginPage() {
                           size="icon"
                           className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
                         >
                           {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           <span className="sr-only">{showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}</span>
