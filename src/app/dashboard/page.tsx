@@ -46,10 +46,10 @@ const topItems = [
 const getIconForActivity = (type: string) => {
   switch (type) {
     case 'order': return <ShoppingCart className="h-4 w-4 text-primary" />;
-    case 'user': return <Users className="h-4 w-4 text-blue-500" />; // Consider theme colors
-    case 'menu': return <Coffee className="h-4 w-4 text-yellow-600" />; // Consider theme colors
-    case 'review': return <TrendingUp className="h-4 w-4 text-green-500" />; // Consider theme colors
-    default: return <Package className="h-4 w-4 text-gray-500" />; // Consider theme colors
+    case 'user': return <Users className="h-4 w-4 text-blue-500" />;
+    case 'menu': return <Coffee className="h-4 w-4 text-yellow-600" />;
+    case 'review': return <TrendingUp className="h-4 w-4 text-green-500" />;
+    default: return <Package className="h-4 w-4 text-gray-500" />;
   }
 };
 
@@ -105,28 +105,29 @@ export default function DashboardPage() {
             <CardDescription>محبوب‌ترین آیتم‌ها بر اساس فروش یا درآمد.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* The Table component already wraps its content in a div with overflow-auto */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">آیتم</TableHead>
-                  <TableHead className="text-center">فروش</TableHead>
-                  <TableHead className="text-left">درآمد</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topItems.slice(0, 5).map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-right">
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-xs text-muted-foreground">{item.category}</div>
-                    </TableCell>
-                    <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
-                    <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">آیتم</TableHead>
+                    <TableHead className="text-center">فروش</TableHead>
+                    <TableHead className="text-left">درآمد</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {topItems.slice(0, 5).map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="text-right">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">{item.category}</div>
+                      </TableCell>
+                      <TableCell className="text-center">{item.sales.toLocaleString('fa-IR')}</TableCell>
+                      <TableCell className="text-left">{item.revenue.toLocaleString('fa-IR')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
