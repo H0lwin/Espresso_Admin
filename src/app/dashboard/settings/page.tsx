@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Clock, Link as LinkIcon, Palette, Trash2 } from "lucide-react";
+import { Save, Clock, Link as LinkIcon, Palette, Trash2, Loader2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkingHour {
   day: string;
@@ -28,6 +30,9 @@ interface SocialLink {
 }
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = React.useState(false);
+
   const [workingHours, setWorkingHours] = React.useState<WorkingHour[]>([
     { day: "Monday", open: "08:00", close: "18:00", isClosed: false },
     { day: "Tuesday", open: "08:00", close: "18:00", isClosed: false },
@@ -44,7 +49,6 @@ export default function SettingsPage() {
     { id: "sl3", platform: "Twitter", url: "https://twitter.com/espressoedge" },
   ]);
   
-  // Theme colors (display only) - fetch from CSS vars
   const [themeColors, setThemeColors] = React.useState({
     primary: "", background: "", accent: "", secondary: ""
   });
@@ -82,9 +86,17 @@ export default function SettingsPage() {
     setSocialLinks(socialLinks.filter(link => link.id !== id));
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     console.log("Saving Settings:", { workingHours, socialLinks });
-    alert("Settings saved (check console)!");
+    toast({
+      title: "Settings Saved",
+      description: "Your site settings have been successfully updated.",
+    });
+    setIsSaving(false);
   };
 
   return (
@@ -93,8 +105,9 @@ export default function SettingsPage() {
         title="Site Settings"
         description="Configure general settings for your website and store."
         actions={
-          <Button onClick={handleSaveChanges}>
-            <Save className="mr-2 h-4 w-4" /> Save All Changes
+          <Button onClick={handleSaveChanges} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isSaving ? "Saving..." : "Save All Changes"}
           </Button>
         }
       />
@@ -113,7 +126,7 @@ export default function SettingsPage() {
                       type="time" 
                       value={wh.open} 
                       onChange={(e) => handleWorkingHourChange(index, 'open', e.target.value)} 
-                      disabled={wh.isClosed}
+                      disabled={wh.isClosed || isSaving}
                       className="w-full"
                     />
                      <span className="text-muted-foreground">-</span>
@@ -121,7 +134,7 @@ export default function SettingsPage() {
                       type="time" 
                       value={wh.close} 
                       onChange={(e) => handleWorkingHourChange(index, 'close', e.target.value)} 
-                      disabled={wh.isClosed}
+                      disabled={wh.isClosed || isSaving}
                       className="w-full"
                     />
                   </div>
@@ -132,6 +145,7 @@ export default function SettingsPage() {
                       checked={wh.isClosed}
                       onChange={(e) => handleWorkingHourChange(index, 'isClosed', e.target.checked)}
                       className="form-checkbox h-4 w-4 text-primary rounded focus:ring-primary"
+                      disabled={isSaving}
                     />
                     <Label htmlFor={`closed-${wh.day}`} className="text-sm">Closed</Label>
                   </div>
@@ -155,6 +169,7 @@ export default function SettingsPage() {
                       value={link.platform} 
                       onChange={(e) => handleSocialLinkChange(index, 'platform', e.target.value)}
                       placeholder="e.g., Facebook"
+                      disabled={isSaving}
                     />
                   </div>
                   <div className="space-y-1 md:col-span-2">
@@ -166,8 +181,9 @@ export default function SettingsPage() {
                       value={link.url} 
                       onChange={(e) => handleSocialLinkChange(index, 'url', e.target.value)}
                       placeholder="https://..."
+                      disabled={isSaving}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSocialLink(link.id)}>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSocialLink(link.id)} disabled={isSaving}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                         <span className="sr-only">Remove link</span>
                     </Button>
@@ -175,7 +191,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addSocialLink}>Add Social Link</Button>
+              <Button type="button" variant="outline" onClick={addSocialLink} disabled={isSaving}>Add Social Link</Button>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -189,17 +205,17 @@ export default function SettingsPage() {
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(themeColors).map(([name, value]) => (
-                <div key={name} className="space-y-1">
-                  <Label className="capitalize">{name}</Label>
-                  <div className="flex items-center gap-2 p-2 border rounded-md">
-                    <div className="w-6 h-6 rounded border" style={{ backgroundColor: `hsl(${value})` }}></div>
-                    <span className="text-sm font-mono">{value}</span>
+                value && (
+                  <div key={name} className="space-y-1">
+                    <Label className="capitalize">{name}</Label>
+                    <div className="flex items-center gap-2 p-2 border rounded-md">
+                      <div className="w-6 h-6 rounded border" style={{ backgroundColor: `hsl(${value})` }}></div>
+                      <span className="text-sm font-mono">{value}</span>
+                    </div>
                   </div>
-                </div>
+                )
               ))}
             </div>
-            {/* Placeholder for actual color pickers if functionality were to be added */}
-            {/* <Button variant="outline" className="mt-4" disabled>Customize Theme (Not Implemented)</Button> */}
           </AccordionContent>
         </AccordionItem>
       </Accordion>
