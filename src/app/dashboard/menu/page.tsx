@@ -32,15 +32,15 @@ import { useToast } from "@/hooks/use-toast";
 import { getCookie } from "@/lib/utils";
 
 type ItemDisplayStatus = "Available" | "Unavailable" | "Draft"; 
-type ApiItemStatus = "available" | "unavailable" | "draft"; // API status keys
+type ApiItemStatus = "available" | "unavailable" | "draft";
 
 interface MenuItem {
   id: string | number;
   name: string;
-  category_name: string; // Field from API (assuming category is represented by name)
+  category_name: string;
   price: number;
   image_url?: string; 
-  status: ApiItemStatus; // API status
+  status: ApiItemStatus;
   description?: string;
 }
 
@@ -48,7 +48,6 @@ interface MenuCategory {
     id: string | number;
     name: string;
 }
-
 
 const itemStatusApiToDisplay: Record<ApiItemStatus, ItemDisplayStatus> = {
   available: "Available",
@@ -66,11 +65,10 @@ const itemStatusTranslations: Record<ItemDisplayStatus, string> = {
   Draft: "پیش‌نویس",
 };
 
-
 export default function MenuPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [categoryFilter, setCategoryFilter] = React.useState("همه"); // Stores category name
+  const [categoryFilter, setCategoryFilter] = React.useState("همه");
   const [menuItems, setMenuItems] = React.useState<MenuItem[]>([]);
   const [categories, setCategories] = React.useState<MenuCategory[]>([]); 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -78,9 +76,8 @@ export default function MenuPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false); 
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
-
   const [itemName, setItemName] = React.useState("");
-  const [itemCategoryName, setItemCategoryName] = React.useState(""); // Stores category name for the form
+  const [itemCategoryName, setItemCategoryName] = React.useState("");
   const [itemPrice, setItemPrice] = React.useState("");
   const [itemDisplayStatus, setItemDisplayStatus] = React.useState<ItemDisplayStatus>("Available");
   const [itemDescription, setItemDescription] = React.useState("");
@@ -90,16 +87,31 @@ export default function MenuPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       setIsLoadingData(true);
+      let fetchedMenuCategories: MenuCategory[] = [];
       try {
+        // Fetch categories
         const catResponse = await fetch("/api/v1/menu-categories/"); 
-        if (!catResponse.ok) throw new Error("خطا در دریافت دسته‌بندی‌ها");
+        if (!catResponse.ok) {
+          let errorDetail = "Failed to fetch categories"; // Default English error
+          try {
+            const errorData = await catResponse.json();
+            errorDetail = errorData.detail || errorData.message || errorDetail;
+          } catch (e) { /* Suppress error if response body isn't JSON or if .json() fails */ }
+          throw new Error(errorDetail); // This will be caught by the catch block
+        }
         const catData = await catResponse.json();
-        const fetchedCategories: MenuCategory[] = catData.results || [];
-        setCategories(fetchedCategories);
-        if (fetchedCategories.length > 0 && !itemCategoryName) {
-          setItemCategoryName(fetchedCategories[0].name); 
+        fetchedMenuCategories = catData.results || [];
+        setCategories(fetchedMenuCategories);
+
+        if (fetchedMenuCategories.length > 0) {
+          if (!itemCategoryName || !fetchedMenuCategories.find(c => c.name === itemCategoryName)) {
+            setItemCategoryName(fetchedMenuCategories[0].name); 
+          }
+        } else {
+          setItemCategoryName(""); 
         }
 
+        // Fetch menu items
         let url = "/api/v1/menu-items/"; 
         const params = new URLSearchParams();
         if (searchTerm) params.append("search", searchTerm);
@@ -109,25 +121,37 @@ export default function MenuPage() {
         if (queryString) url += `?${queryString}`;
 
         const itemsResponse = await fetch(url);
-        if (!itemsResponse.ok) throw new Error("خطا در دریافت آیتم‌های منو");
+        if (!itemsResponse.ok) {
+          let errorDetail = "Failed to fetch menu items";
+          try {
+            const errorData = await itemsResponse.json();
+            errorDetail = errorData.detail || errorData.message || errorDetail;
+          } catch (e) { /* Suppress error */ }
+          throw new Error(errorDetail);
+        }
         const itemsData = await itemsResponse.json();
         setMenuItems(itemsData.results || []);
 
-      } catch (error) {
-        console.error("Fetch error:", error);
+      } catch (error: any) { 
+        console.error("Fetch error in MenuPage:", error); 
         toast({
-          title: "خطا",
-          description: (error as Error).message || "امکان بارگذاری اطلاعات منو وجود ندارد.",
+          title: "خطا در بارگذاری اطلاعات منو", 
+          description: error.message || "امکان بارگذاری اطلاعات وجود ندارد. لطفاً بعداً دوباره امتحان کنید.",
           variant: "destructive",
         });
         setMenuItems([]);
-        setCategories([]);
+        // If error message indicates category fetch failure, reset category related states
+        if (error.message && (error.message.toLowerCase().includes("categories") || error.message.toLowerCase().includes("دسته‌بندی‌ها"))) {
+            setCategories([]);
+            setItemCategoryName("");
+            if (categoryFilter !== "همه") setCategoryFilter("همه"); // Reset filter only if it wasn't already "همه"
+        }
       } finally {
         setIsLoadingData(false);
       }
     };
     fetchData();
-  }, [searchTerm, categoryFilter, toast]);
+  }, [searchTerm, categoryFilter, toast]); // itemCategoryName is intentionally not in deps as it's set by this effect
 
   const handleAddNewItem = () => {
     setEditingItem(null);
@@ -158,7 +182,7 @@ export default function MenuPage() {
     
     const originalItems = [...menuItems];
     setMenuItems(prevItems => prevItems.filter(item => item.id !== itemId));
-    setIsSubmitting(true); // Indicate loading for delete
+    setIsSubmitting(true);
 
     try {
       const csrfToken = getCookie("csrftoken");
@@ -169,17 +193,22 @@ export default function MenuPage() {
         },
       });
       if (!response.ok) {
-        throw new Error("خطا در حذف آیتم");
+        let errorDetail = "خطا در حذف آیتم";
+        try {
+            const errorData = await response.json();
+            errorDetail = errorData.detail || errorData.message || "خطا در حذف آیتم";
+        } catch(e) {/* suppress */}
+        throw new Error(errorDetail);
       }
       toast({
         title: "آیتم حذف شد",
         description: "آیتم منو با موفقیت حذف گردید.",
       });
-    } catch (error) {
+    } catch (error: any) {
       setMenuItems(originalItems);
       toast({
         title: "خطا در حذف",
-        description: (error as Error).message || "امکان حذف آیتم وجود نداشت. لطفا دوباره تلاش کنید.",
+        description: error.message || "امکان حذف آیتم وجود نداشت. لطفا دوباره تلاش کنید.",
         variant: "destructive",
       });
     } finally {
@@ -189,6 +218,10 @@ export default function MenuPage() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!itemCategoryName && categories.length > 0) {
+      toast({ title: "خطا", description: "لطفاً یک دسته‌بندی انتخاب کنید.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
 
     const formData = new FormData();
@@ -217,8 +250,12 @@ export default function MenuPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({detail: "خطا در پردازش درخواست"}));
-        throw new Error(errorData.detail || "خطا در ذخیره آیتم");
+        let errorDetail = "خطا در ذخیره آیتم";
+        try {
+            const errorData = await response.json();
+            errorDetail = errorData.detail || errorData.message || "خطا در ذخیره آیتم";
+        } catch(e) {/* suppress */}
+        throw new Error(errorDetail);
       }
       const savedItem = await response.json();
 
@@ -300,7 +337,7 @@ export default function MenuPage() {
             disabled={isLoadingData || isSubmitting}
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoadingData || isSubmitting}>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter} disabled={isLoadingData || isSubmitting || categories.length === 0}>
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="فیلتر بر اساس دسته‌بندی" />
           </SelectTrigger>
@@ -334,7 +371,7 @@ export default function MenuPage() {
             {menuItems.length === 0 && !isLoadingData && (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  آیتم منویی یافت نشد.
+                  آیتم منویی یافت نشد {categoryFilter !== "همه" || searchTerm ? "با فیلترهای فعلی." : "."}
                 </TableCell>
               </TableRow>
             )}
@@ -381,9 +418,9 @@ export default function MenuPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="itemCategoryName">دسته‌بندی</Label>
-                <Select value={itemCategoryName} onValueChange={setItemCategoryName} required disabled={isSubmitting}>
+                <Select value={itemCategoryName} onValueChange={setItemCategoryName} required disabled={isSubmitting || categories.length === 0}>
                   <SelectTrigger id="itemCategoryName">
-                    <SelectValue placeholder="انتخاب دسته‌بندی" />
+                    <SelectValue placeholder={categories.length === 0 ? "دسته‌بندی‌ای یافت نشد" : "انتخاب دسته‌بندی"} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map(cat => (
@@ -391,6 +428,7 @@ export default function MenuPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                 {categories.length === 0 && <p className="text-xs text-muted-foreground">ابتدا یک دسته‌بندی اضافه کنید.</p>}
               </div>
             </div>
             
