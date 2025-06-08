@@ -11,6 +11,7 @@ import {
   Settings,
   Moon,
   Sun,
+  UserCircle2, // Added UserCircle2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export function Header() {
          <div className={cn(
             "hidden md:block",
             // eslint-disable-next-line react-hooks/rules-of-hooks
-            useSidebar().state === "expanded" && "md:hidden" 
+            useSidebar().state === "expanded" && "md:hidden"
           )}>
             <Logo size="sm" />
          </div>
@@ -64,7 +65,7 @@ export function Header() {
       <div className="flex w-full items-center gap-4 md:ms-auto md:gap-2 lg:gap-4">
         <form className="me-auto flex-1 sm:flex-initial">
           <div className="relative">
-            <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" /> 
+            <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="جستجو..."
