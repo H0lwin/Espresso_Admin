@@ -23,6 +23,7 @@ import {
   Home,
   Info,
   Package,
+  Archive, // Icon for categories
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -51,7 +52,15 @@ export interface NavItem {
 const navItems: NavItem[] = [
   { title: "داشبورد", href: "/dashboard", icon: LayoutDashboard },
   { title: "سفارشات", href: "/dashboard/orders", icon: ShoppingCart },
-  { title: "منو", href: "/dashboard/menu", icon: ListOrdered },
+  {
+    title: "منو",
+    href: "/dashboard/menu",
+    icon: ListOrdered,
+    items: [
+      { title: "آیتم‌های منو", href: "/dashboard/menu", icon: ListOrdered },
+      { title: "دسته‌بندی‌ها", href: "/dashboard/menu/categories", icon: Archive },
+    ],
+  },
   { title: "مشتریان", href: "/dashboard/customers", icon: Users },
   {
     title: "مدیریت محتوا",
@@ -89,21 +98,42 @@ const navItems: NavItem[] = [
 export function SidebarNav() {
   const pathname = usePathname();
 
-  const renderNavItems = (items: NavItem[], isSubmenu = false) => {
+  const renderNavItems = (items: NavItem[], isSubmenu = false, parentHref = "") => {
     return items.map((item) => {
-      const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-      
+      // For main menu items that have sub-items, their own href might also be a valid page.
+      // The isActive check should handle this.
+      // A menu item is active if the current pathname is exactly its href,
+      // OR if it's a parent and the current pathname starts with its href (and it's not the dashboard itself),
+      // OR if it's a sub-item and the current pathname is its href.
+      let isActive = pathname === item.href;
+      if (item.items && item.items.length > 0 && item.href !== "/dashboard") {
+        // If it's a parent item, it's active if the path starts with its href
+        // or if any of its children are active.
+        isActive = isActive || pathname.startsWith(item.href) || item.items.some(subItem => pathname === subItem.href);
+      }
+       if (item.href === "/dashboard/menu" && pathname === "/dashboard/menu/categories") {
+        isActive = false; // Ensure "Menu Items" is not active when "Categories" is active
+      }
+
+
       if (item.items && item.items.length > 0) {
-        const isParentActive = item.items.some(subItem => pathname.startsWith(subItem.href));
+        const isParentActive = item.items.some(subItem => pathname === subItem.href || pathname.startsWith(subItem.href));
+         // Special handling for parent "Menu" item if one of its children is active
+        let isDirectlyActiveParent = pathname === item.href;
+        if (item.href === "/dashboard/menu" && (pathname === "/dashboard/menu" || pathname === "/dashboard/menu/categories")) {
+             isDirectlyActiveParent = (pathname === "/dashboard/menu" && !pathname.startsWith("/dashboard/menu/categories")) || item.items.some(subItem => pathname === subItem.href);
+        }
+
+
         return (
           <SidebarMenuItem key={item.href}>
             <Collapsible defaultOpen={isParentActive}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
                   className="w-full justify-between"
-                  isActive={isActive && !item.items.some(subItem => pathname.startsWith(subItem.href))}
+                  isActive={isDirectlyActiveParent && !isParentActive && item.items.some(si => si.href === pathname) ? false : isDirectlyActiveParent}
                   aria-expanded={isParentActive}
-                  asChild={!isSubmenu && !item.items}
+                  asChild={false} // Ensure it's a button for CollapsibleTrigger
                 >
                    <div className="flex items-center w-full">
                     <item.icon className="ms-2 h-4 w-4" />
@@ -114,7 +144,7 @@ export function SidebarNav() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {renderNavItems(item.items, true)}
+                  {renderNavItems(item.items, true, item.href)}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
@@ -124,10 +154,17 @@ export function SidebarNav() {
 
       const MenuButtonComponent = isSubmenu ? SidebarMenuSubButton : SidebarMenuButton;
       
+      // For direct links (not parents of submenus)
+      let linkIsActive = pathname === item.href;
+      if(parentHref === "/dashboard/menu" && item.href === "/dashboard/menu" && pathname.startsWith("/dashboard/menu/categories")) {
+        linkIsActive = false; // "Menu Items" link should not be active if "Categories" page is active
+      }
+
+
       return (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
-            <MenuButtonComponent isActive={isActive} tooltip={item.title}>
+            <MenuButtonComponent isActive={linkIsActive} tooltip={item.title}>
               <item.icon className="ms-2 h-4 w-4" />
               <span>{item.title}</span>
             </MenuButtonComponent>
@@ -139,3 +176,4 @@ export function SidebarNav() {
 
   return <SidebarMenu>{renderNavItems(navItems)}</SidebarMenu>;
 }
+
