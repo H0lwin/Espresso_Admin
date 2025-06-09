@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+// import { Textarea } from "@/components/ui/textarea"; // Textarea might not be needed if form_description is removed
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, MapPin, Phone, Mail as MailIcon, Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -20,8 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { getCookie } from "@/lib/utils";
 
 interface ContactPageData {
-  form_title: string;
-  form_description: string;
+  form_title: string; // Keep for display, not edit
+  form_description: string; // Keep for display, not edit
   address: string;
   phone: string;
   email: string;
@@ -33,8 +33,8 @@ export default function CmsContactPage() {
   const [isSaving, setIsSaving] = React.useState(false);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
-  const [formTitle, setFormTitle] = React.useState("");
-  const [formDescription, setFormDescription] = React.useState("");
+  const [formTitle, setFormTitle] = React.useState("در تماس باشید"); // Default, will be overwritten by API
+  const [formDescription, setFormDescription] = React.useState("سوال یا بازخوردی دارید؟ فرم زیر را پر کنید."); // Default
   const [address, setAddress] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -44,7 +44,7 @@ export default function CmsContactPage() {
     const fetchData = async () => {
       setIsLoadingData(true);
       try {
-        const response = await fetch("/api/v1/cms/contact/"); // Replace with your actual endpoint
+        const response = await fetch("/api/v1/cms/contact/"); 
         if (!response.ok) throw new Error("Failed to fetch Contact Us page data");
         const data: ContactPageData = await response.json();
         setFormTitle(data.form_title || "در تماس باشید");
@@ -68,6 +68,10 @@ export default function CmsContactPage() {
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
+    // formTitle and formDescription are no longer editable, but we send their current values.
+    // Backend should decide if it wants to update them or ignore them.
+    // Ideally, if they are truly static on frontend, they shouldn't be part of the PATCH payload.
+    // For now, sending them to avoid breaking API if it expects them.
     const payload: ContactPageData = {
       form_title: formTitle,
       form_description: formDescription,
@@ -79,8 +83,8 @@ export default function CmsContactPage() {
 
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch("/api/v1/cms/contact/", { // Replace with your actual endpoint
-        method: "PATCH", // Or PUT/POST
+      const response = await fetch("/api/v1/cms/contact/", { 
+        method: "PATCH", 
         headers: {
           "Content-Type": "application/json",
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
@@ -92,10 +96,7 @@ export default function CmsContactPage() {
         const errorData = await response.json().catch(() => ({detail: "خطا در ذخیره اطلاعات"}));
         throw new Error(errorData.detail || "Failed to save Contact Us data");
       }
-      // Optionally update state from response if API returns the saved object
-      // const savedData: ContactPageData = await response.json();
-      // setFormTitle(savedData.form_title); ... etc.
-
+      
       toast({
         title: "تغییرات ذخیره شد",
         description: "اطلاعات صفحه تماس با ما با موفقیت به‌روزرسانی شد.",
@@ -135,21 +136,13 @@ export default function CmsContactPage() {
 
       <Accordion type="multiple" defaultValue={["form", "details", "map"]} className="w-full space-y-4">
         <AccordionItem value="form">
-          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">تنظیمات فرم تماس</AccordionTrigger>
+          <AccordionTrigger className="text-xl font-semibold p-4 bg-card rounded-t-lg hover:no-underline">پیش‌نمایش فرم تماس</AccordionTrigger>
           <AccordionContent className="p-4 border border-t-0 rounded-b-lg bg-card">
             <div className="grid gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="formTitle">عنوان فرم</Label>
-                <Input id="formTitle" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} disabled={isSaving}/>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="formDescription">توضیحات/متن مقدماتی فرم</Label>
-                <Textarea id="formDescription" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} disabled={isSaving}/>
-              </div>
               <Card>
                 <CardHeader className="text-right">
-                  <CardTitle className="text-base">پیش‌نمایش فرم (فقط ظاهری)</CardTitle>
-                  <CardDescription className="text-xs">این یک نمایش بصری است. فیلدهای فرم استاندارد هستند.</CardDescription>
+                  <CardTitle className="text-lg">{formTitle}</CardTitle>
+                  <CardDescription className="text-sm">{formDescription}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Input placeholder="نام شما" disabled />
@@ -158,6 +151,9 @@ export default function CmsContactPage() {
                   <Button disabled>ارسال پیام</Button>
                 </CardContent>
               </Card>
+               <p className="text-xs text-muted-foreground">
+                 عنوان و توضیحات فرم تماس از طریق کد مدیریت می‌شوند و در اینجا قابل ویرایش نیستند.
+               </p>
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -194,12 +190,13 @@ export default function CmsContactPage() {
               <div>
                 <Label>پیش‌نمایش نقشه</Label>
                 <Image 
-                  src={mapEmbedUrl.startsWith("https://") ? mapEmbedUrl : "https://placehold.co/600x400.png"} 
+                  src={mapEmbedUrl.startsWith("https://") && (mapEmbedUrl.includes("placehold.co") || mapEmbedUrl.includes("maps.google.com") || mapEmbedUrl.includes("openstreetmap.org")) ? mapEmbedUrl : "https://placehold.co/600x400.png"} 
                   alt="پیش‌نمایش نقشه" 
                   width={600} 
                   height={400} 
                   className="rounded-md border object-cover w-full aspect-video" 
                   data-ai-hint="location map"
+                  onError={(e) => (e.currentTarget.src = "https://placehold.co/600x400.png")}
                 />
               </div>
             </div>

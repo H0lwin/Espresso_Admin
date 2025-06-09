@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -51,7 +52,7 @@ const AlertDialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
+      "flex flex-col space-y-2 text-center sm:text-right", // Changed sm:text-left to sm:text-right
       className
     )}
     {...props}
@@ -65,7 +66,7 @@ const AlertDialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-start sm:space-x-2 sm:space-x-reverse", // Changed sm:justify-end to sm:justify-start and added sm:space-x-reverse
       className
     )}
     {...props}
@@ -79,7 +80,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold", className)}
+    className={cn("text-lg font-semibold", className)} // Alignment handled by parent AlertDialogHeader
     {...props}
   />
 ))
@@ -91,7 +92,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-muted-foreground", className)} // Alignment handled by parent AlertDialogHeader
     {...props}
   />
 ))

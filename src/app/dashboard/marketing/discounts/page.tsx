@@ -102,7 +102,7 @@ export default function DiscountCodesPage() {
   React.useEffect(() => {
     const fetchDiscounts = async () => {
       setIsLoadingData(true);
-      let url = "/api/v1/discounts/"; // Replace with your actual endpoint
+      let url = "/api/v1/discounts/"; 
       if (searchTerm) {
         url += `?search=${encodeURIComponent(searchTerm)}`;
       }
@@ -112,7 +112,7 @@ export default function DiscountCodesPage() {
           throw new Error("خطا در دریافت لیست کدهای تخفیف");
         }
         const data = await response.json();
-        setDiscounts(data.results || []); // Assuming DRF pagination
+        setDiscounts(data.results || []); 
       } catch (error) {
         toast({
           title: "خطا",
@@ -161,7 +161,7 @@ export default function DiscountCodesPage() {
 
     try {
       const csrfToken = getCookie("csrftoken");
-      const response = await fetch(`/api/v1/discounts/${discountId}/`, { // Replace with your actual endpoint
+      const response = await fetch(`/api/v1/discounts/${discountId}/`, { 
         method: "DELETE",
          headers: {
           ...(csrfToken && { "X-CSRFToken": csrfToken }),
@@ -199,8 +199,8 @@ export default function DiscountCodesPage() {
     };
     
     const apiEndpoint = editingDiscount 
-      ? `/api/v1/discounts/${editingDiscount.id}/` // Replace with your actual endpoint
-      : "/api/v1/discounts/";                 // Replace with your actual endpoint
+      ? `/api/v1/discounts/${editingDiscount.id}/` 
+      : "/api/v1/discounts/";                 
     const method = editingDiscount ? "PATCH" : "POST";
 
     try {
@@ -333,14 +333,14 @@ export default function DiscountCodesPage() {
       )}
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !isSubmitting && setIsFormOpen(open)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader className="text-right">
+        <DialogContent className="sm:max-w-lg text-right">
+          <DialogHeader>
             <DialogTitle>{editingDiscount ? "ویرایش کد تخفیف" : "ایجاد کد تخفیف جدید"}</DialogTitle>
             <DialogDescription>
               {editingDiscount ? "جزئیات این کد تخفیف را به‌روزرسانی کنید." : "یک کد تخفیف جدید برای مشتریان خود تعریف کنید."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 py-4 text-right">
+          <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
             <div>
               <Label htmlFor="code">کد تخفیف</Label>
               <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="مثلا SAVE10" required disabled={isSubmitting} />
@@ -366,7 +366,7 @@ export default function DiscountCodesPage() {
               <Label htmlFor="dateRange">بازه تاریخی</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button id="dateRange" variant="outline" className="w-full justify-start text-right font-normal" disabled={isSubmitting}>
+                  <Button id="dateRange" variant="outline" className="w-full justify-between text-right font-normal" disabled={isSubmitting}> {/* Changed justify-start to justify-between */}
                      {dateRange?.from && isValid(dateRange.from) ? (
                       dateRange.to && isValid(dateRange.to) ? (
                         <>
@@ -378,7 +378,7 @@ export default function DiscountCodesPage() {
                     ) : (
                       <span>انتخاب بازه تاریخی</span>
                     )}
-                    <CalendarIcon className="me-auto h-4 w-4" /> 
+                    <CalendarIcon className="ms-auto h-4 w-4" /> {/* Changed me-auto to ms-auto */}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -390,11 +390,11 @@ export default function DiscountCodesPage() {
               <Label htmlFor="usageLimit">محدودیت استفاده (اختیاری)</Label>
               <Input id="usageLimit" type="number" value={usageLimit} onChange={(e) => setUsageLimit(e.target.value)} placeholder="مثلا ۱۰۰ (خالی برای نامحدود)" disabled={isSubmitting} />
             </div>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch id="formIsActive" checked={formIsActive} onCheckedChange={setFormIsActive} disabled={isSubmitting} />
-              <Label htmlFor="formIsActive">فعال</Label>
+            <div className="flex items-center gap-2"> {/* Changed space-x-2 space-x-reverse to gap-2 */}
+              <Switch id="formIsActive" checked={formIsActive} onCheckedChange={setFormIsActive} disabled={isSubmitting} dir="ltr"/> {/* Added dir=ltr to switch for correct handle movement */}
+              <Label htmlFor="formIsActive" className="mb-0">فعال</Label> {/* Removed self-center and added mb-0 for better alignment with switch */}
             </div>
-            <DialogFooter className="sm:justify-start">
+            <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
                 {editingDiscount ? "ذخیره تغییرات" : "ایجاد کد"}
